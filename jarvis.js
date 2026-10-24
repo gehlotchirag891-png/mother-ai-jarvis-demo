@@ -1,7 +1,7 @@
 "use strict";
 
-const tabs = [document.getElementById("chatTab"), document.getElementById("workTab")];
-const views = [document.getElementById("chatView"), document.getElementById("workView")];
+const tabs = [document.getElementById("chatTab"), document.getElementById("workTab"), document.getElementById("jarvisTab")];
+const views = [document.getElementById("chatView"), document.getElementById("workView"), document.getElementById("jarvisView")];
 const input = document.getElementById("chatInput");
 const messageList = document.getElementById("conversationMessages");
 const taskList = document.getElementById("taskList");
@@ -213,55 +213,6 @@ document.querySelectorAll("[data-prompt]").forEach((button) => {
   });
 });
 
-const orbControl = document.getElementById("orbControl");
-const jarvisOrb = document.getElementById("jarvisOrb");
-const voiceStateLabel = document.getElementById("voiceStateLabel");
-const voicePreviewButton = document.getElementById("voicePreviewButton");
-const voicePreviewNote = document.getElementById("voicePreviewNote");
-const voiceStates = ["listening", "thinking", "speaking", "idle"];
-let voicePreviewTimer = null;
-let voiceStateIndex = 0;
-
-function setVoiceState(state) {
-  const labels = {
-    idle: "JARVIS · IDLE",
-    listening: "JARVIS · LISTENING · SIMULATED",
-    thinking: "JARVIS · THINKING · SIMULATED",
-    speaking: "JARVIS · SPEAKING · SIMULATED",
-  };
-  jarvisOrb.dataset.state = state;
-  orbControl.dataset.state = state;
-  voiceStateLabel.textContent = labels[state];
-}
-
-function stopVoicePreview() {
-  window.clearInterval(voicePreviewTimer);
-  voicePreviewTimer = null;
-  voicePreviewButton.textContent = "Preview voice states";
-  setVoiceState("idle");
-}
-
-voicePreviewButton.addEventListener("click", () => {
-  if (voicePreviewTimer) {
-    stopVoicePreview();
-    return;
-  }
-  voicePreviewNote.hidden = false;
-  voicePreviewButton.textContent = "Stop preview";
-  voiceStateIndex = 1;
-  setVoiceState(voiceStates[0]);
-  voicePreviewTimer = window.setInterval(() => {
-    const state = voiceStates[voiceStateIndex];
-    setVoiceState(state);
-    voiceStateIndex += 1;
-    if (voiceStateIndex >= voiceStates.length) stopVoicePreview();
-  }, 1350);
-});
-
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden && voicePreviewTimer) stopVoicePreview();
-});
-
 function statusLabel(plan) {
   return {
     draft: "Needs review",
@@ -271,6 +222,14 @@ function statusLabel(plan) {
     stopped: "Stopped",
     complete: "Complete",
   }[plan.status] || "Saved";
+}
+
+function updateJarvisSummary() {
+  const plan = currentPlan();
+  document.getElementById("jarvisCurrentTask").textContent = plan ? plan.title : "No active plan";
+  document.getElementById("jarvisCurrentStatus").textContent = plan
+    ? `${statusLabel(plan)} · progress appears in Work`
+    : "Create a request to add a plan to Work.";
 }
 
 function renderTaskList() {
@@ -440,6 +399,7 @@ function renderActiveTask() {
 function renderWorkspace() {
   renderTaskList();
   renderActiveTask();
+  updateJarvisSummary();
 }
 
 function selectPlan(id) {
@@ -540,6 +500,75 @@ cancelButton.addEventListener("click", () => {
   plan.note = "The simulation stopped. Nothing was executed.";
   saveWorkspace();
   renderWorkspace();
+});
+
+function addJarvisMessage(kind, text) {
+  const bubble = document.createElement("p");
+  bubble.className = kind === "user" ? "jarvis-user-message" : "jarvis-reply";
+  bubble.textContent = text;
+  document.getElementById("jarvisConversation").append(bubble);
+  bubble.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+document.getElementById("jarvisForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const jarvisInput = document.getElementById("jarvisInput");
+  const request = jarvisInput.value.trim();
+  if (!request) return;
+
+  pauseRunningPlan("Paused while you added a JARVIS request.");
+  addJarvisMessage("user", request);
+  jarvisInput.value = "";
+  jarvisInput.disabled = true;
+  const send = document.querySelector("#jarvisForm button[type=submit]");
+  send.disabled = true;
+  document.getElementById("jarvisStatus").textContent = "THINKING · LOCAL SIMULATION";
+  document.getElementById("coreSystem").dataset.state = "thinking";
+  document.getElementById("jarvisCurrentStatus").textContent = "Preparing a local starter plan…";
+
+  window.setTimeout(() => {
+    const plan = makePlan(request);
+    plan.approved = true;
+    plan.status = "ready";
+    workspace.plans.push(plan);
+    workspace.activeId = plan.id;
+    saveWorkspace();
+    renderChat();
+    renderWorkspace();
+    addJarvisMessage("assistant", `I made a local starter plan for “${plan.title}”. Open Work to review its steps and watch a simulated walkthrough. I’m not connected to an AI or computer controls in this prototype.`);
+    document.getElementById("jarvisStatus").textContent = "CORE STANDBY · PROTOTYPE";
+    document.getElementById("coreSystem").dataset.state = "idle";
+    jarvisInput.disabled = false;
+    send.disabled = false;
+    jarvisInput.focus();
+  }, 650);
+});
+
+document.getElementById("jarvisInput").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    document.getElementById("jarvisForm").requestSubmit();
+  }
+});
+
+document.getElementById("openWorkButton").addEventListener("click", () => selectTab(1));
+
+let coreZoom = 1;
+function applyCoreZoom() {
+  document.getElementById("coreSystem").style.setProperty("--core-zoom", coreZoom.toFixed(2));
+  document.getElementById("zoomLevel").value = `${Math.round(coreZoom * 100)}%`;
+}
+document.getElementById("zoomIn").addEventListener("click", () => {
+  coreZoom = Math.min(1.6, Math.round((coreZoom + 0.1) * 10) / 10);
+  applyCoreZoom();
+});
+document.getElementById("zoomOut").addEventListener("click", () => {
+  coreZoom = Math.max(0.6, Math.round((coreZoom - 0.1) * 10) / 10);
+  applyCoreZoom();
+});
+document.getElementById("zoomReset").addEventListener("click", () => {
+  coreZoom = 1;
+  applyCoreZoom();
 });
 
 if (!workspace.plans.some((plan) => plan.id === workspace.activeId)) {
