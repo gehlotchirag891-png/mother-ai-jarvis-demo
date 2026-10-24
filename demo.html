@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080d13">
+  <meta name="description" content="A visual-first Mother AI and JARVIS interface prototype.">
+  <title>JARVIS · Mother AI</title>
+  <link rel="stylesheet" href="jarvis.css">
+  <script src="jarvis.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="Mother AI project overview"><span class="brand-glyph">M</span><span><b>MOTHER AI</b><small>JARVIS INTERFACE</small></span></a>
+      <nav class="tabs" role="tablist" aria-label="Main sections">
+        <button class="tab active" id="chatTab" role="tab" aria-selected="true" aria-controls="chatView" type="button">Chat</button>
+        <button class="tab" id="workTab" role="tab" aria-selected="false" aria-controls="workView" type="button">Work</button>
+      </nav>
+      <div class="prototype-flag"><span></span> VISUAL PROTOTYPE</div>
+    </header>
+
+    <main>
+      <section class="view active" id="chatView" role="tabpanel" aria-labelledby="chatTab">
+        <div class="chat-heading"><div><div class="overline">YOUR CREATIVE PARTNER</div><h1>Let’s make something real.</h1><p>Describe an idea. We’ll shape it into a clear plan together.</p></div><div class="orb" aria-hidden="true"><i></i><i></i><i></i></div></div>
+        <div class="chat-layout">
+          <div class="conversation" aria-live="polite" aria-label="Conversation">
+            <article class="message assistant"><div class="avatar">M</div><div><div class="speaker">MOTHER AI <span>· READY</span></div><p>Hi. I’m here to help you think through your next idea. What would you like to create?</p></div></article>
+            <div class="suggestions" aria-label="Example prompts">
+              <button type="button" class="suggestion" data-prompt="Help me plan a cinematic website for my business."><span>✳</span><b>Plan a website</b><small>Turn an idea into steps</small></button>
+              <button type="button" class="suggestion" data-prompt="I want to design a calm, futuristic workspace."><span>◈</span><b>Explore a visual idea</b><small>Shape the look and feeling</small></button>
+              <button type="button" class="suggestion" data-prompt="Help me break a big project into manageable tasks."><span>⌘</span><b>Organize a project</b><small>Find a useful first step</small></button>
+            </div>
+            <div id="conversationMessages" aria-live="polite"></div>
+            <div class="local-note" role="note">Prototype only · your message stays in this page and is not sent to an AI.</div>
+          </div>
+          <aside class="side-note"><span class="side-icon">✧</span><div class="overline">A CLEARER WAY FORWARD</div><h2>Think together.<br>See what’s next.</h2><p>JARVIS is being designed to make plans and progress visible as you work.</p><div class="side-rule"></div><div class="side-foot"><span class="pulse"></span> VISUAL-FIRST BY DESIGN</div></aside>
+        </div>
+        <form id="chatForm" class="composer"><label class="sr-only" for="chatInput">Describe what you want to create</label><textarea id="chatInput" rows="1" maxlength="500" placeholder="Tell me what you’re thinking about…"></textarea><div class="composer-bottom"><span>Enter to add to this demo · Shift + Enter for a new line</span><button class="send" type="submit" aria-label="Add message to demo">↑</button></div></form>
+      </section>
+
+      <section class="view" id="workView" role="tabpanel" aria-labelledby="workTab" hidden>
+        <div class="work-title"><div><div class="overline">JARVIS WORKSPACE <span class="demo-tag">DEMO DATA</span></div><h1>See the work take shape.</h1><p>A visual overview of a task in progress. All task data and controls here are simulated.</p></div><div class="work-id"><span class="pulse"></span> PREVIEW TASK</div></div>
+        <div class="work-grid">
+          <section class="work-main">
+            <article class="task-card panel">
+              <div class="task-top"><div class="task-mark">✦</div><div class="task-info"><div class="overline">CURRENT TASK · DEMO</div><h2 id="taskTitle">Waiting for a plan</h2><p id="taskDescription">Create a plan in Chat and approve it to see the task appear here.</p></div><span id="taskStatus" class="status-chip"><i></i> Awaiting plan</span></div>
+              <div class="progress-row"><span>Demo progress</span><b id="progressLabel">0%</b></div><div class="progress-track" role="progressbar" aria-label="Prototype task progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="progressFill"></span></div>
+              <div class="task-controls"><button id="startButton" class="control-button start-demo" type="button" disabled>▶ &nbsp; Start demo</button><button id="pauseButton" class="control-button" type="button" disabled>Ⅱ &nbsp; Pause demo</button><button id="cancelButton" class="control-button danger" type="button" disabled>Stop demo</button><span id="controlNote">Approve a Chat plan to begin this demo.</span></div>
+            </article>
+
+            <section class="panel timeline-panel"><div class="section-head"><div><div class="overline">ACTIVITY</div><h2>What’s happening</h2></div><span class="live-label"><i></i> DEMO TIMELINE</span></div>
+              <ol class="timeline" id="timeline" aria-live="polite">
+                <li class="future"><span class="timeline-icon">1</span><div><b>Plan approval</b><p>A reviewed plan will appear here.</p><small>WAITING</small></div></li>
+                <li class="future"><span class="timeline-icon">2</span><div><b>First visual concept</b><p>Shown as a simulated step after you start the demo.</p><small>UP NEXT</small></div></li>
+                <li class="future"><span class="timeline-icon">3</span><div><b>Review the result</b><p>The preview changes during the demonstration.</p><small>UP NEXT</small></div></li>
+              </ol>
+            </section>
+          </section>
+
+          <aside class="work-side">
+            <section class="panel preview-panel"><div class="section-head"><div><div class="overline">CANVAS</div><h2>Visual preview</h2></div><span class="canvas-badge">CONCEPT</span></div>
+              <div class="canvas" aria-label="Illustrative preview placeholder"><div class="canvas-top"><span id="previewBrand">YOUR IDEA <i>— visual concept</i></span><span>PREVIEW</span></div><div class="hero-art"><div class="sun"></div><div class="lamp"><i></i><b></b><span></span></div><div class="table"></div><div class="plant">✳</div></div><div class="canvas-copy"><small id="previewEyebrow">A FIRST DIRECTION</small><b id="previewHeadline">Your idea,<br>taking shape.</b><span id="previewSubhead">Approve a plan to personalize this concept.</span><em id="previewAction">CONCEPT PREVIEW</em></div></div>
+              <p class="preview-caption"><span class="placeholder-dot"></span> <span id="previewCaption">Illustrative preview · not generated</span></p>
+            </section>
+            <section class="panel next-panel"><div class="overline">NEXT UP</div><h3 id="nextTitle">Approve a plan in Chat</h3><p id="nextDescription">The next step will update here as the demo progresses.</p><div class="next-progress"><span id="nextProgress"></span></div><div class="next-foot"><span id="nextStep">WAITING FOR PLAN</span><span>DEMO</span></div></section>
+          </aside>
+        </div>
+        <div class="prototype-note"><span>ⓘ</span> This workspace is a visual prototype. Approval creates only a temporary demo task; starting it simulates progress in this page. Nothing is executed or saved.</div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
+
