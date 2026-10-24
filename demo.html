@@ -7,6 +7,8 @@
   <meta name="description" content="A visual-first Mother AI and JARVIS interface prototype.">
   <title>JARVIS · Mother AI</title>
   <link rel="stylesheet" href="jarvis.css">
+  <link rel="stylesheet" href="workspace.css">
+  <script src="workspace-store.js" defer></script>
   <script src="jarvis.js" defer></script>
 </head>
 <body>
@@ -22,7 +24,15 @@
 
     <main>
       <section class="view active" id="chatView" role="tabpanel" aria-labelledby="chatTab">
-        <div class="chat-heading"><div><div class="overline">YOUR CREATIVE PARTNER</div><h1>Let’s make something real.</h1><p>Describe an idea. We’ll shape it into a clear plan together.</p></div><div class="orb" aria-hidden="true"><i></i><i></i><i></i></div></div>
+        <div class="chat-heading">
+          <div><div class="overline">YOUR CREATIVE PARTNER</div><h1>Let’s make something real.</h1><p>Describe an idea. We’ll shape it into a clear plan together.</p></div>
+          <div class="orb-control" id="orbControl" data-state="idle">
+            <div class="orb" id="jarvisOrb" data-state="idle" aria-hidden="true"><i></i><i></i><i></i></div>
+            <div class="voice-state" role="status" aria-live="polite"><span class="voice-state-dot"></span><span id="voiceStateLabel">JARVIS · IDLE</span></div>
+            <button id="voicePreviewButton" class="voice-preview" type="button">Preview voice states</button>
+            <p id="voicePreviewNote" class="voice-preview-note" hidden>Animation only · no microphone or AI is active.</p>
+          </div>
+        </div>
         <div class="chat-layout">
           <div class="conversation" aria-live="polite" aria-label="Conversation">
             <article class="message assistant"><div class="avatar">M</div><div><div class="speaker">MOTHER AI <span>· READY</span></div><p>Hi. I’m here to help you think through your next idea. What would you like to create?</p></div></article>
@@ -32,7 +42,7 @@
               <button type="button" class="suggestion" data-prompt="Help me break a big project into manageable tasks."><span>⌘</span><b>Organize a project</b><small>Find a useful first step</small></button>
             </div>
             <div id="conversationMessages" aria-live="polite"></div>
-            <div class="local-note" role="note">Prototype only · your message stays in this page and is not sent to an AI.</div>
+            <div class="local-note" role="note">Prototype only · plans are saved in this browser and are not sent to an AI or server.</div>
           </div>
           <aside class="side-note"><span class="side-icon">✧</span><div class="overline">A CLEARER WAY FORWARD</div><h2>Think together.<br>See what’s next.</h2><p>JARVIS is being designed to make plans and progress visible as you work.</p><div class="side-rule"></div><div class="side-foot"><span class="pulse"></span> VISUAL-FIRST BY DESIGN</div></aside>
         </div>
@@ -40,9 +50,15 @@
       </section>
 
       <section class="view" id="workView" role="tabpanel" aria-labelledby="workTab" hidden>
-        <div class="work-title"><div><div class="overline">JARVIS WORKSPACE <span class="demo-tag">DEMO DATA</span></div><h1>See the work take shape.</h1><p>A visual overview of a task in progress. All task data and controls here are simulated.</p></div><div class="work-id"><span class="pulse"></span> PREVIEW TASK</div></div>
+        <div class="work-title"><div><div class="overline">JARVIS WORKSPACE <span class="demo-tag">LOCAL DEMO</span></div><h1>See the work take shape.</h1><p>Your plans stay in this browser. Task progress is only a local simulation.</p></div><div class="work-id"><span class="pulse"></span> BROWSER STORAGE</div></div>
         <div class="work-grid">
           <section class="work-main">
+            <section class="panel task-library" aria-labelledby="taskLibraryTitle">
+              <div class="section-head"><div><div class="overline">YOUR WORKSPACE</div><h2 id="taskLibraryTitle">Saved plans</h2></div><button id="newPlanButton" class="text-button" type="button">＋ New plan</button></div>
+              <p class="storage-note" id="storageNote">Saved in this browser only. Plans are not uploaded or synced.</p>
+              <div class="task-list" id="taskList" aria-live="polite"></div>
+              <button id="clearDataButton" class="clear-data" type="button" hidden>Clear all saved plans</button>
+            </section>
             <article class="task-card panel">
               <div class="task-top"><div class="task-mark">✦</div><div class="task-info"><div class="overline">CURRENT TASK · DEMO</div><h2 id="taskTitle">Waiting for a plan</h2><p id="taskDescription">Create a plan in Chat and approve it to see the task appear here.</p></div><span id="taskStatus" class="status-chip"><i></i> Awaiting plan</span></div>
               <div class="progress-row"><span>Demo progress</span><b id="progressLabel">0%</b></div><div class="progress-track" role="progressbar" aria-label="Prototype task progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="progressFill"></span></div>
@@ -66,7 +82,7 @@
             <section class="panel next-panel"><div class="overline">NEXT UP</div><h3 id="nextTitle">Approve a plan in Chat</h3><p id="nextDescription">The next step will update here as the demo progresses.</p><div class="next-progress"><span id="nextProgress"></span></div><div class="next-foot"><span id="nextStep">WAITING FOR PLAN</span><span>DEMO</span></div></section>
           </aside>
         </div>
-        <div class="prototype-note"><span>ⓘ</span> This workspace is a visual prototype. Approval creates only a temporary demo task; starting it simulates progress in this page. Nothing is executed or saved.</div>
+        <div class="prototype-note"><span>ⓘ</span> This is a visual prototype. Plans and simulation progress are saved only in this browser. Starting a demo simulates progress; nothing is executed or sent to a server.</div>
       </section>
     </main>
   </div>
