@@ -8,6 +8,7 @@
   <title>JARVIS · Mother AI</title>
   <link rel="stylesheet" href="jarvis.css">
   <link rel="stylesheet" href="workspace.css">
+  <link rel="stylesheet" href="jarvis-core.css">
   <script src="workspace-store.js" defer></script>
   <script src="jarvis.js" defer></script>
 </head>
@@ -18,21 +19,14 @@
       <nav class="tabs" role="tablist" aria-label="Main sections">
         <button class="tab active" id="chatTab" role="tab" aria-selected="true" aria-controls="chatView" type="button">Chat</button>
         <button class="tab" id="workTab" role="tab" aria-selected="false" aria-controls="workView" type="button">Work</button>
+        <button class="tab" id="jarvisTab" role="tab" aria-selected="false" aria-controls="jarvisView" type="button">JARVIS</button>
       </nav>
       <div class="prototype-flag"><span></span> VISUAL PROTOTYPE</div>
     </header>
 
     <main>
       <section class="view active" id="chatView" role="tabpanel" aria-labelledby="chatTab">
-        <div class="chat-heading">
-          <div><div class="overline">YOUR CREATIVE PARTNER</div><h1>Let’s make something real.</h1><p>Describe an idea. We’ll shape it into a clear plan together.</p></div>
-          <div class="orb-control" id="orbControl" data-state="idle">
-            <div class="orb" id="jarvisOrb" data-state="idle" aria-hidden="true"><i></i><i></i><i></i></div>
-            <div class="voice-state" role="status" aria-live="polite"><span class="voice-state-dot"></span><span id="voiceStateLabel">JARVIS · IDLE</span></div>
-            <button id="voicePreviewButton" class="voice-preview" type="button">Preview voice states</button>
-            <p id="voicePreviewNote" class="voice-preview-note" hidden>Animation only · no microphone or AI is active.</p>
-          </div>
-        </div>
+        <div class="chat-heading"><div><div class="overline">YOUR CREATIVE PARTNER</div><h1>Let’s make something real.</h1><p>Describe an idea. We’ll shape it into a clear plan together.</p></div></div>
         <div class="chat-layout">
           <div class="conversation" aria-live="polite" aria-label="Conversation">
             <article class="message assistant"><div class="avatar">M</div><div><div class="speaker">MOTHER AI <span>· READY</span></div><p>Hi. I’m here to help you think through your next idea. What would you like to create?</p></div></article>
@@ -47,6 +41,46 @@
           <aside class="side-note"><span class="side-icon">✧</span><div class="overline">A CLEARER WAY FORWARD</div><h2>Think together.<br>See what’s next.</h2><p>JARVIS is being designed to make plans and progress visible as you work.</p><div class="side-rule"></div><div class="side-foot"><span class="pulse"></span> VISUAL-FIRST BY DESIGN</div></aside>
         </div>
         <form id="chatForm" class="composer"><label class="sr-only" for="chatInput">Describe what you want to create</label><textarea id="chatInput" rows="1" maxlength="500" placeholder="Tell me what you’re thinking about…"></textarea><div class="composer-bottom"><span>Enter to add to this demo · Shift + Enter for a new line</span><button class="send" type="submit" aria-label="Add message to demo">↑</button></div></form>
+      </section>
+
+      <section class="view jarvis-view" id="jarvisView" role="tabpanel" aria-labelledby="jarvisTab" hidden>
+        <div class="jarvis-hud">
+          <div><div class="jarvis-kicker">MOTHER AI <span> / </span> JARVIS CORE</div><h1>Presence interface</h1></div>
+          <div class="jarvis-state"><i></i><span id="jarvisStatus">CORE STANDBY · PROTOTYPE</span></div>
+        </div>
+        <div class="jarvis-stage" aria-label="JARVIS visual workspace">
+          <div class="space-grain" aria-hidden="true"></div>
+          <div class="star speck-one" aria-hidden="true"></div><div class="star speck-two" aria-hidden="true"></div><div class="star speck-three" aria-hidden="true"></div><div class="star speck-four" aria-hidden="true"></div><div class="star speck-five" aria-hidden="true"></div>
+          <div class="jarvis-visual-wrap">
+            <div class="core-halo" aria-hidden="true"></div>
+            <div class="core-system" id="coreSystem" role="img" aria-label="Golden JARVIS core with rotating orbital lines and points">
+              <div class="orbit orbit-a"><i class="orbit-point"></i><i class="orbit-point point-two"></i></div>
+              <div class="orbit orbit-b"><i class="orbit-point"></i><i class="orbit-point point-two"></i></div>
+              <div class="orbit orbit-c"><i class="orbit-point"></i></div>
+              <div class="orbit orbit-d"><i class="orbit-point"></i></div>
+              <div class="sun-corona"></div>
+              <div class="sun-core"><i></i><i></i><i></i><i></i><span></span></div>
+              <div class="core-sparks" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
+            </div>
+          </div>
+          <div class="zoom-controls" aria-label="JARVIS animation zoom controls">
+            <button id="zoomOut" type="button" aria-label="Zoom out">−</button><output id="zoomLevel" aria-live="polite">100%</output><button id="zoomIn" type="button" aria-label="Zoom in">+</button><button id="zoomReset" type="button">Reset</button>
+          </div>
+          <aside class="jarvis-console" aria-label="Talk with JARVIS">
+            <div class="console-head"><div><span class="console-label">LOCAL TEXT PROTOTYPE</span><h2>Talk with JARVIS</h2></div><span class="console-ready"><i></i> READY</span></div>
+            <div class="jarvis-active-task"><span>CURRENT WORK · DEMO</span><b id="jarvisCurrentTask">No active plan</b><span id="jarvisCurrentStatus">Create a request to add a plan to Work.</span></div>
+            <div class="jarvis-conversation" id="jarvisConversation" aria-live="polite">
+              <p class="jarvis-reply">I’m here. Type a request and I’ll create a local starter plan you can follow in Work.</p>
+            </div>
+            <form class="jarvis-composer" id="jarvisForm">
+              <label class="sr-only" for="jarvisInput">Type a request for JARVIS</label>
+              <textarea id="jarvisInput" rows="1" maxlength="500" placeholder="Type a request for JARVIS…"></textarea>
+              <button type="submit">Send</button>
+            </form>
+            <p class="computer-access-note">No microphone, AI, or computer controls are connected. This prototype does not perform actions on your device.</p>
+            <button id="openWorkButton" class="open-work-button" type="button">View progress in Work <span aria-hidden="true">↗</span></button>
+          </aside>
+        </div>
       </section>
 
       <section class="view" id="workView" role="tabpanel" aria-labelledby="workTab" hidden>
