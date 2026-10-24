@@ -62,6 +62,8 @@ tabs.forEach((tab, index) => {
   });
 });
 
+if (window.location.hash === "#jarvisView") selectTab(2);
+
 function currentPlan() {
   return workspace.plans.find((plan) => plan.id === workspace.activeId) || null;
 }
