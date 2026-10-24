@@ -2,7 +2,39 @@
 
 const tabs = [document.getElementById("chatTab"), document.getElementById("workTab")];
 const views = [document.getElementById("chatView"), document.getElementById("workView")];
-const simulation = { plan: null, timer: null, stage: 0, paused: false, stopped: false };
+const input = document.getElementById("chatInput");
+const messageList = document.getElementById("conversationMessages");
+const taskList = document.getElementById("taskList");
+const storageNote = document.getElementById("storageNote");
+const startButton = document.getElementById("startButton");
+const pauseButton = document.getElementById("pauseButton");
+const cancelButton = document.getElementById("cancelButton");
+const taskStatus = document.getElementById("taskStatus");
+const controlNote = document.getElementById("controlNote");
+const timeline = document.getElementById("timeline");
+const progressBar = document.querySelector(".progress-track");
+
+const loaded = window.JarvisWorkspaceStore.load();
+const workspace = loaded.workspace;
+const simulation = { timer: null };
+let persistentStorage = loaded.persistent;
+
+// A refresh pauses a running visual simulation. Nothing runs in the background.
+workspace.plans.forEach((plan) => {
+  if (plan.status === "running") {
+    plan.status = "paused";
+    plan.note = "Paused when this page was closed or refreshed.";
+  }
+});
+saveWorkspace();
+
+function saveWorkspace() {
+  persistentStorage = window.JarvisWorkspaceStore.save(workspace);
+  storageNote.textContent = persistentStorage
+    ? "Saved in this browser only. Plans are not uploaded or synced."
+    : "Browser storage is unavailable. Plans will stay only until you close this page.";
+  return persistentStorage;
+}
 
 function selectTab(index, focus = false) {
   tabs.forEach((tab, i) => {
@@ -29,14 +61,29 @@ tabs.forEach((tab, index) => {
     selectTab(next, true);
   });
 });
-selectTab(0);
 
-const input = document.getElementById("chatInput");
-const messageList = document.getElementById("conversationMessages");
+function currentPlan() {
+  return workspace.plans.find((plan) => plan.id === workspace.activeId) || null;
+}
 
-function addMessage(role, textContent, extraClass = "") {
+function setStatus(status) {
+  taskStatus.replaceChildren();
+  const dot = document.createElement("i");
+  taskStatus.append(dot, document.createTextNode(status));
+  taskStatus.classList.toggle("paused", status === "Paused demo");
+  taskStatus.classList.toggle("stopped", status === "Stopped demo");
+  taskStatus.classList.toggle("complete", status === "Demo complete");
+}
+
+function setProgress(value, label = `${value}%`) {
+  document.getElementById("progressLabel").textContent = label;
+  document.getElementById("progressFill").style.width = `${value}%`;
+  progressBar.setAttribute("aria-valuenow", String(value));
+}
+
+function addMessage(role, textContent, shouldScroll = true) {
   const article = document.createElement("article");
-  article.className = `message ${role}${extraClass ? ` ${extraClass}` : ""}`;
+  article.className = `message ${role}`;
   article.style.marginTop = "18px";
   const avatar = document.createElement("div");
   avatar.className = `avatar ${role === "user" ? "user-avatar" : ""}`;
@@ -50,22 +97,29 @@ function addMessage(role, textContent, extraClass = "") {
   content.append(title, text);
   article.append(avatar, content);
   messageList.append(article);
-  article.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  if (shouldScroll) article.scrollIntoView({ block: "nearest", behavior: "smooth" });
   return article;
 }
 
 function makePlan(idea) {
   const siteLike = /website|web page|landing page|launch page|site\b/i.test(idea);
   return {
+    id: crypto.randomUUID ? crypto.randomUUID() : `plan-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     idea,
     title: idea.length > 76 ? `${idea.slice(0, 73).trimEnd()}…` : idea,
     steps: siteLike
       ? ["Map the page story and key sections", "Shape a visual direction for the first screen", "Review the concept and next steps"]
       : ["Clarify the idea and its main goal", "Create a visual direction for the concept", "Review the concept and next steps"],
+    createdAt: new Date().toISOString(),
+    approved: false,
+    status: "draft",
+    stage: 0,
+    progress: 0,
+    note: "",
   };
 }
 
-function showPlan(plan) {
+function renderPlanCard(plan) {
   const card = document.createElement("article");
   card.className = "proposal-card";
   const heading = document.createElement("div");
@@ -74,15 +128,15 @@ function showPlan(plan) {
   kicker.className = "proposal-kicker";
   kicker.textContent = "PLAN PREVIEW · LOCAL DEMO";
   const stamp = document.createElement("span");
-  stamp.className = "proposal-stamp";
-  stamp.textContent = "REVIEW FIRST";
+  stamp.className = `proposal-stamp${plan.approved ? " approved" : ""}`;
+  stamp.textContent = plan.approved ? "SAVED · DEMO" : "REVIEW FIRST";
   heading.append(kicker, stamp);
 
   const title = document.createElement("h3");
   title.textContent = plan.title;
   const intro = document.createElement("p");
   intro.className = "proposal-intro";
-  intro.textContent = "Here’s a starter plan template based on your message. It was not generated by an AI.";
+  intro.textContent = "A starter plan template based on your message. It was not generated by an AI.";
   const list = document.createElement("ol");
   list.className = "proposal-steps";
   plan.steps.forEach((step, index) => {
@@ -97,30 +151,46 @@ function showPlan(plan) {
 
   const actionRow = document.createElement("div");
   actionRow.className = "proposal-actions";
-  const localNote = document.createElement("span");
-  localNote.textContent = "No work starts until you approve.";
-  const approve = document.createElement("button");
-  approve.className = "approve-plan";
-  approve.type = "button";
-  approve.textContent = "Approve & add to Work";
-  approve.addEventListener("click", () => {
-    approve.disabled = true;
-    approve.textContent = "✓ Added to Work";
-    stamp.textContent = "APPROVED · DEMO";
-    stamp.classList.add("approved");
-    activateTask(plan);
+  const note = document.createElement("span");
+  note.textContent = plan.approved ? "Saved to this browser’s Work list." : "Review the template before adding it to Work.";
+  const action = document.createElement("button");
+  action.className = plan.approved ? "approve-plan secondary-action" : "approve-plan";
+  action.type = "button";
+  action.textContent = plan.approved ? "Open in Work" : "Save plan to Work";
+  action.addEventListener("click", () => {
+    if (!plan.approved) {
+      plan.approved = true;
+      plan.status = "ready";
+      plan.note = "";
+    }
+    workspace.activeId = plan.id;
+    saveWorkspace();
+    renderWorkspace();
     selectTab(1);
   });
-  actionRow.append(localNote, approve);
+  actionRow.append(note, action);
   card.append(heading, title, intro, list, actionRow);
   messageList.append(card);
-  card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+function renderChat() {
+  messageList.replaceChildren();
+  workspace.plans.forEach((plan) => {
+    addMessage("user", plan.idea, false);
+    renderPlanCard(plan);
+  });
 }
 
 function submitIdea(value) {
-  addMessage("user", value);
-  showPlan(makePlan(value));
+  pauseRunningPlan("Paused while you added another plan.");
+  const plan = makePlan(value);
+  workspace.plans.push(plan);
+  workspace.activeId = plan.id;
+  saveWorkspace();
+  renderChat();
   input.value = "";
+  const lastCard = messageList.lastElementChild;
+  if (lastCard) lastCard.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
 
 document.getElementById("chatForm").addEventListener("submit", (event) => {
@@ -143,38 +213,115 @@ document.querySelectorAll("[data-prompt]").forEach((button) => {
   });
 });
 
-const startButton = document.getElementById("startButton");
-const pauseButton = document.getElementById("pauseButton");
-const cancelButton = document.getElementById("cancelButton");
-const taskStatus = document.getElementById("taskStatus");
-const controlNote = document.getElementById("controlNote");
-const timeline = document.getElementById("timeline");
-const progressBar = document.querySelector(".progress-track");
+const orbControl = document.getElementById("orbControl");
+const jarvisOrb = document.getElementById("jarvisOrb");
+const voiceStateLabel = document.getElementById("voiceStateLabel");
+const voicePreviewButton = document.getElementById("voicePreviewButton");
+const voicePreviewNote = document.getElementById("voicePreviewNote");
+const voiceStates = ["listening", "thinking", "speaking", "idle"];
+let voicePreviewTimer = null;
+let voiceStateIndex = 0;
 
-function setStatus(status) {
-  taskStatus.replaceChildren();
-  const dot = document.createElement("i");
-  const label = document.createTextNode(status);
-  taskStatus.append(dot, label);
-  taskStatus.classList.toggle("paused", status === "Paused demo");
-  taskStatus.classList.toggle("stopped", status === "Stopped demo");
-  taskStatus.classList.toggle("complete", status === "Demo complete");
+function setVoiceState(state) {
+  const labels = {
+    idle: "JARVIS · IDLE",
+    listening: "JARVIS · LISTENING · SIMULATED",
+    thinking: "JARVIS · THINKING · SIMULATED",
+    speaking: "JARVIS · SPEAKING · SIMULATED",
+  };
+  jarvisOrb.dataset.state = state;
+  orbControl.dataset.state = state;
+  voiceStateLabel.textContent = labels[state];
 }
 
-function setProgress(value, label = `${value}%`) {
-  document.getElementById("progressLabel").textContent = label;
-  document.getElementById("progressFill").style.width = `${value}%`;
-  progressBar.setAttribute("aria-valuenow", String(value));
+function stopVoicePreview() {
+  window.clearInterval(voicePreviewTimer);
+  voicePreviewTimer = null;
+  voicePreviewButton.textContent = "Preview voice states";
+  setVoiceState("idle");
+}
+
+voicePreviewButton.addEventListener("click", () => {
+  if (voicePreviewTimer) {
+    stopVoicePreview();
+    return;
+  }
+  voicePreviewNote.hidden = false;
+  voicePreviewButton.textContent = "Stop preview";
+  voiceStateIndex = 1;
+  setVoiceState(voiceStates[0]);
+  voicePreviewTimer = window.setInterval(() => {
+    const state = voiceStates[voiceStateIndex];
+    setVoiceState(state);
+    voiceStateIndex += 1;
+    if (voiceStateIndex >= voiceStates.length) stopVoicePreview();
+  }, 1350);
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && voicePreviewTimer) stopVoicePreview();
+});
+
+function statusLabel(plan) {
+  return {
+    draft: "Needs review",
+    ready: "Ready",
+    running: "In progress · demo",
+    paused: "Paused",
+    stopped: "Stopped",
+    complete: "Complete",
+  }[plan.status] || "Saved";
+}
+
+function renderTaskList() {
+  taskList.replaceChildren();
+  const clearButton = document.getElementById("clearDataButton");
+  clearButton.hidden = workspace.plans.length === 0;
+
+  if (!workspace.plans.length) {
+    const empty = document.createElement("div");
+    empty.className = "task-list-empty";
+    empty.textContent = "Your saved plans will appear here. Start one from Chat.";
+    taskList.append(empty);
+    return;
+  }
+
+  [...workspace.plans].reverse().forEach((plan) => {
+    const row = document.createElement("div");
+    row.className = `task-list-row${plan.id === workspace.activeId ? " selected" : ""}`;
+    const select = document.createElement("button");
+    select.type = "button";
+    select.className = "task-select";
+    select.setAttribute("aria-current", String(plan.id === workspace.activeId));
+    const title = document.createElement("b");
+    title.textContent = plan.title;
+    const detail = document.createElement("span");
+    detail.textContent = `${statusLabel(plan)} · ${new Date(plan.createdAt).toLocaleDateString()}`;
+    select.append(title, detail);
+    select.addEventListener("click", () => selectPlan(plan.id));
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "task-remove";
+    remove.setAttribute("aria-label", `Remove plan: ${plan.title}`);
+    remove.textContent = "×";
+    remove.addEventListener("click", () => removePlan(plan.id));
+    row.append(select, remove);
+    taskList.append(row);
+  });
 }
 
 function renderTimeline(currentStep, completed = false, stopped = false) {
   timeline.replaceChildren();
+  const plan = currentPlan();
+  if (!plan) return;
   const steps = [
-    { title: "Plan approved", detail: "Your reviewed plan was added to this demo." },
-    ...simulation.plan.steps.map((title) => ({ title, detail: "A simulated activity step for this idea." })),
+    { title: "Plan saved", detail: "Your starter plan is stored in this browser." },
+    ...plan.steps.map((title) => ({ title, detail: "A simulated activity step for this idea." })),
   ];
   steps.forEach((step, index) => {
-    const state = completed || index < currentStep ? "done" : index === currentStep ? (stopped ? "stopped" : "current") : "future";
+    const isCurrent = index === currentStep;
+    const state = completed || index < currentStep ? "done" : isCurrent ? (stopped ? "stopped" : "current") : "future";
     const item = document.createElement("li");
     item.className = state;
     const icon = document.createElement("span");
@@ -196,117 +343,209 @@ function renderTimeline(currentStep, completed = false, stopped = false) {
   });
 }
 
-function activateTask(plan) {
-  window.clearInterval(simulation.timer);
-  simulation.plan = plan;
-  simulation.stage = 0;
-  simulation.paused = false;
-  simulation.stopped = false;
+function renderActiveTask() {
+  const plan = currentPlan();
+  simulation.planId = plan?.id || null;
+
+  if (!plan) {
+    document.getElementById("taskTitle").textContent = "Waiting for a plan";
+    document.getElementById("taskDescription").textContent = "Create a plan in Chat and save it to see it here.";
+    setStatus("Awaiting plan");
+    setProgress(0);
+    startButton.disabled = true;
+    pauseButton.disabled = true;
+    cancelButton.disabled = true;
+    controlNote.textContent = "Create a plan in Chat to begin.";
+    timeline.replaceChildren();
+    document.getElementById("nextTitle").textContent = "Create a plan in Chat";
+    document.getElementById("nextDescription").textContent = "Your selected plan’s next step will appear here.";
+    document.getElementById("nextStep").textContent = "WAITING FOR PLAN";
+    document.getElementById("previewCaption").textContent = "Illustrative preview · not generated";
+    return;
+  }
+
   document.getElementById("taskTitle").textContent = plan.title;
-  document.getElementById("taskDescription").textContent = "Plan approved in this prototype. Start the demo to watch its activity and preview change.";
-  setStatus("Ready for demo");
-  setProgress(0);
-  startButton.disabled = false;
-  startButton.textContent = "▶  Start demo";
-  pauseButton.disabled = true;
-  pauseButton.dataset.paused = "false";
-  pauseButton.textContent = "Ⅱ  Pause demo";
-  cancelButton.disabled = true;
-  controlNote.textContent = "Approval added a temporary demo task.";
-  renderTimeline(1);
-  const previewTitle = plan.title.length > 30 ? `${plan.title.slice(0, 27).trimEnd()}…` : plan.title;
+  document.getElementById("taskDescription").textContent = plan.approved
+    ? "Saved in this browser. Start the demo to watch its activity and preview change."
+    : "Review this starter plan in Chat and save it to Work before starting a demo.";
   document.getElementById("previewBrand").childNodes[0].textContent = plan.title.toUpperCase();
   document.getElementById("previewEyebrow").textContent = "A FIRST DIRECTION · DEMO";
+  const previewTitle = plan.title.length > 30 ? `${plan.title.slice(0, 27).trimEnd()}…` : plan.title;
   document.getElementById("previewHeadline").textContent = `A concept for\n${previewTitle}`;
   document.getElementById("previewSubhead").textContent = "Illustrative layout based on your request.";
   document.getElementById("previewAction").textContent = "ILLUSTRATIVE MOCKUP";
-  document.getElementById("previewCaption").textContent = "Static illustration · label and copy updated for this demo";
-  document.getElementById("nextTitle").textContent = plan.steps[0];
-  document.getElementById("nextDescription").textContent = "Start the demo to see the activity timeline progress.";
-  document.getElementById("nextProgress").style.width = "0%";
-  document.getElementById("nextStep").textContent = "READY · DEMO";
-}
+  document.getElementById("previewCaption").textContent = "Static illustration · label and copy updated for this plan";
+  document.getElementById("nextTitle").textContent = plan.steps[Math.min(plan.stage, plan.steps.length - 1)];
+  document.getElementById("nextDescription").textContent = "The next timeline step will appear here as the demo progresses.";
+  document.getElementById("nextProgress").style.width = `${plan.progress}%`;
+  document.getElementById("nextStep").textContent = plan.status === "complete" ? "DEMO COMPLETE" : plan.approved ? "READY · DEMO" : "PLAN NEEDS REVIEW";
+  setProgress(plan.progress, plan.status === "stopped" ? "Stopped" : `${plan.progress}%`);
 
-function updateDemoStage() {
-  const stage = simulation.stage;
-  const progress = [18, 54, 84, 100][stage];
-  const planStep = Math.min(stage, simulation.plan.steps.length - 1);
-  setProgress(progress);
-  renderTimeline(stage + 1, stage === 3);
-  document.getElementById("previewEyebrow").textContent = stage >= 2 ? "VISUAL DIRECTION · DEMO" : "A FIRST DIRECTION · DEMO";
-  const previewTitle = simulation.plan.title.length > 30 ? `${simulation.plan.title.slice(0, 27).trimEnd()}…` : simulation.plan.title;
-  document.getElementById("previewHeadline").textContent = stage >= 2 ? `A visual idea\nfor ${previewTitle}` : `A concept for\n${previewTitle}`;
-  document.getElementById("previewSubhead").textContent = stage === 3 ? "The demo preview is ready for your review." : "This illustrative preview updates as the demo advances.";
-  document.getElementById("previewCaption").textContent = stage === 3 ? "Demo complete · static illustration, not generated" : "Simulated preview update · not generated";
-  document.getElementById("nextTitle").textContent = stage === 3 ? "Review the concept" : simulation.plan.steps[Math.min(planStep + 1, simulation.plan.steps.length - 1)];
-  document.getElementById("nextDescription").textContent = stage === 3 ? "Your idea has completed this short visual walkthrough." : "The next timeline step will appear in the preview.";
-  document.getElementById("nextProgress").style.width = `${stage === 3 ? 100 : progress}%`;
-  document.getElementById("nextStep").textContent = stage === 3 ? "DEMO COMPLETE" : `STEP ${stage + 1} OF 3 · DEMO`;
+  if (!plan.approved) {
+    setStatus("Awaiting plan");
+    startButton.disabled = true;
+    startButton.textContent = "Approve in Chat";
+    pauseButton.disabled = true;
+    cancelButton.disabled = true;
+    controlNote.textContent = "Review and save this plan from Chat first.";
+    renderTimeline(0);
+    return;
+  }
 
-  if (stage === 3) {
-    window.clearInterval(simulation.timer);
-    simulation.timer = null;
+  const currentStep = Math.min(plan.stage, plan.steps.length);
+  renderTimeline(plan.status === "ready" ? 1 : currentStep, plan.status === "complete", plan.status === "stopped");
+  if (plan.status === "ready") {
+    setStatus("Ready for demo");
+    startButton.disabled = false;
+    startButton.textContent = "▶  Start demo";
+    pauseButton.disabled = true;
+    pauseButton.textContent = "Ⅱ  Pause demo";
+    cancelButton.disabled = true;
+    controlNote.textContent = "This browser-only demo has not started.";
+  } else if (plan.status === "running") {
+    setStatus("In progress · demo");
+    startButton.disabled = true;
+    startButton.textContent = "Demo running…";
+    pauseButton.disabled = false;
+    pauseButton.textContent = "Ⅱ  Pause demo";
+    cancelButton.disabled = false;
+    controlNote.textContent = "Progress is simulated locally in this page.";
+  } else if (plan.status === "paused") {
+    setStatus("Paused demo");
+    startButton.disabled = false;
+    startButton.textContent = "▶  Resume demo";
+    pauseButton.disabled = true;
+    pauseButton.textContent = "▶  Resume demo";
+    cancelButton.disabled = false;
+    controlNote.textContent = plan.note || "The local progress simulation is paused.";
+  } else if (plan.status === "stopped") {
+    setStatus("Stopped demo");
+    startButton.disabled = false;
+    startButton.textContent = "↻  Restart demo";
+    pauseButton.disabled = true;
+    pauseButton.textContent = "Ⅱ  Pause demo";
+    cancelButton.disabled = true;
+    controlNote.textContent = "The simulation stopped. Nothing was executed.";
+  } else {
     setStatus("Demo complete");
     startButton.disabled = false;
     startButton.textContent = "↻  Replay demo";
     pauseButton.disabled = true;
+    pauseButton.textContent = "Ⅱ  Pause demo";
     cancelButton.disabled = true;
     controlNote.textContent = "Simulation complete. Replay it or return to Chat.";
-    return;
   }
-  simulation.stage += 1;
+}
+
+function renderWorkspace() {
+  renderTaskList();
+  renderActiveTask();
+}
+
+function selectPlan(id) {
+  if (workspace.activeId !== id) pauseRunningPlan("Paused while you viewed another plan.");
+  workspace.activeId = id;
+  saveWorkspace();
+  renderWorkspace();
+}
+
+function pauseRunningPlan(reason) {
+  const active = currentPlan();
+  if (!active || active.status !== "running") return;
+  window.clearInterval(simulation.timer);
+  simulation.timer = null;
+  active.status = "paused";
+  active.note = reason;
+}
+
+function removePlan(id) {
+  const plan = workspace.plans.find((item) => item.id === id);
+  if (!plan || !window.confirm(`Remove “${plan.title}” from this browser?`)) return;
+  pauseRunningPlan("Paused while you removed a plan.");
+  workspace.plans = workspace.plans.filter((item) => item.id !== id);
+  if (workspace.activeId === id) workspace.activeId = workspace.plans.at(-1)?.id || null;
+  saveWorkspace();
+  renderChat();
+  renderWorkspace();
+}
+
+document.getElementById("newPlanButton").addEventListener("click", () => {
+  selectTab(0);
+  input.focus();
+});
+
+document.getElementById("clearDataButton").addEventListener("click", () => {
+  if (!window.confirm("Clear every saved plan from this browser? This cannot be undone.")) return;
+  window.clearInterval(simulation.timer);
+  simulation.timer = null;
+  workspace.plans = [];
+  workspace.activeId = null;
+  window.JarvisWorkspaceStore.clear();
+  saveWorkspace();
+  renderChat();
+  renderWorkspace();
+  selectTab(0);
+  input.focus();
+});
+
+function advanceDemo() {
+  const plan = currentPlan();
+  if (!plan || plan.status !== "running") return;
+  plan.stage = Math.min(plan.stage + 1, 4);
+  plan.progress = [0, 18, 54, 84, 100][plan.stage];
+  if (plan.stage >= 4) {
+    plan.status = "complete";
+    plan.note = "";
+    window.clearInterval(simulation.timer);
+    simulation.timer = null;
+  }
+  saveWorkspace();
+  renderWorkspace();
 }
 
 startButton.addEventListener("click", () => {
-  if (!simulation.plan) return;
-  if (simulation.stage >= 3 || simulation.stopped) {
-    simulation.stage = 0;
-    simulation.stopped = false;
-    setProgress(0);
-    renderTimeline(1);
+  const plan = currentPlan();
+  if (!plan?.approved) return;
+  if (plan.status === "ready" || plan.status === "stopped" || plan.status === "complete") {
+    plan.stage = 0;
+    plan.progress = 0;
   }
-  simulation.paused = false;
-  startButton.disabled = true;
-  startButton.textContent = "Demo running…";
-  pauseButton.disabled = false;
-  pauseButton.dataset.paused = "false";
-  pauseButton.textContent = "Ⅱ  Pause demo";
-  cancelButton.disabled = false;
-  setStatus("In progress · demo");
-  controlNote.textContent = "Progress is simulated locally in this page.";
-  updateDemoStage();
-  if (simulation.stage < 3) {
-    simulation.timer = window.setInterval(() => {
-      if (simulation.paused) return;
-      updateDemoStage();
-    }, 1400);
+  plan.status = "running";
+  plan.note = "";
+  saveWorkspace();
+  renderWorkspace();
+  if (plan.stage === 0) advanceDemo();
+  if (plan.status === "running") {
+    simulation.timer = window.setInterval(advanceDemo, 1400);
   }
 });
 
 pauseButton.addEventListener("click", () => {
-  if (!simulation.plan || simulation.stopped) return;
-  simulation.paused = !simulation.paused;
-  pauseButton.dataset.paused = String(simulation.paused);
-  pauseButton.textContent = simulation.paused ? "▶  Resume demo" : "Ⅱ  Pause demo";
-  setStatus(simulation.paused ? "Paused demo" : "In progress · demo");
-  renderTimeline(simulation.stage);
-  const activeStep = timeline.querySelector("li.current small");
-  if (activeStep && simulation.paused) activeStep.textContent = "PAUSED · DEMO";
-  controlNote.textContent = simulation.paused ? "The local progress simulation is paused." : "Progress is simulated locally in this page.";
+  const plan = currentPlan();
+  if (!plan || plan.status !== "running") return;
+  window.clearInterval(simulation.timer);
+  simulation.timer = null;
+  plan.status = "paused";
+  plan.note = "The local progress simulation is paused.";
+  saveWorkspace();
+  renderWorkspace();
 });
 
 cancelButton.addEventListener("click", () => {
+  const plan = currentPlan();
+  if (!plan || !["running", "paused"].includes(plan.status)) return;
   window.clearInterval(simulation.timer);
   simulation.timer = null;
-  simulation.paused = false;
-  simulation.stopped = true;
-  setStatus("Stopped demo");
-  renderTimeline(simulation.stage, false, true);
-  document.getElementById("progressLabel").textContent = "Stopped";
-  pauseButton.disabled = true;
-  cancelButton.disabled = true;
-  startButton.disabled = false;
-  startButton.textContent = "↻  Restart demo";
-  controlNote.textContent = "The demo simulation stopped. Nothing was executed.";
+  plan.status = "stopped";
+  plan.note = "The simulation stopped. Nothing was executed.";
+  saveWorkspace();
+  renderWorkspace();
 });
+
+if (!workspace.plans.some((plan) => plan.id === workspace.activeId)) {
+  workspace.activeId = workspace.plans.at(-1)?.id || null;
+}
+renderChat();
+renderWorkspace();
+selectTab(0);
 
