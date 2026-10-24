@@ -1,4 +1,7 @@
 .jarvis-view{position:relative;width:100%;max-width:none;height:max(680px,calc(100vh - 76px));min-height:680px;margin:0;padding:0;overflow:hidden;background:#030407;color:#f6ebce;isolation:isolate}
+.tab-link{display:grid;place-items:center;text-decoration:none}
+#jarvisView:target{display:block!important}
+main:has(#jarvisView:target) #chatView,main:has(#jarvisView:target) #workView{display:none!important}
 .jarvis-view::before{position:absolute;inset:0;z-index:-2;background:radial-gradient(ellipse at 50% 42%,#211706 0,#0b0906 34%,#030407 72%);content:""}
 .jarvis-hud{position:absolute;z-index:5;top:24px;left:clamp(18px,4vw,56px);right:clamp(18px,4vw,56px);display:flex;justify-content:space-between;align-items:flex-start}
 .jarvis-kicker,.console-label{color:#c6a85e;font-size:9px;font-weight:700;letter-spacing:.2em}
