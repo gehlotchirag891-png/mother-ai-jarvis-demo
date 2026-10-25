@@ -3,23 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080d13">
+  <meta name="theme-color" content="#000000">
   <meta name="description" content="A visual-first Mother AI and JARVIS interface prototype.">
   <title>JARVIS · Mother AI</title>
   <link rel="stylesheet" href="jarvis.css">
   <link rel="stylesheet" href="workspace.css">
-  <link rel="stylesheet" href="jarvis-core.css">
+  <link rel="stylesheet" href="jarvis-core.css?v=0.5.0">
   <script src="workspace-store.js" defer></script>
-  <script src="jarvis.js?v=0.4.1" defer></script>
+  <script src="jarvis.js?v=0.5.0" defer></script>
 </head>
 <body>
   <div class="shell">
     <header class="topbar">
       <a class="brand" href="index.html" aria-label="Mother AI project overview"><span class="brand-glyph">M</span><span><b>MOTHER AI</b><small>JARVIS INTERFACE</small></span></a>
       <nav class="tabs" role="tablist" aria-label="Main sections">
-        <button class="tab active" id="chatTab" role="tab" aria-selected="true" aria-controls="chatView" type="button">Chat</button>
-        <button class="tab" id="workTab" role="tab" aria-selected="false" aria-controls="workView" type="button">Work</button>
-        <a class="tab tab-link" id="jarvisTab" role="tab" aria-selected="false" aria-controls="jarvisView" href="#jarvisView">JARVIS</a>
+        <button class="tab active" id="chatTab" role="tab" aria-selected="true" aria-controls="chatView" aria-keyshortcuts="Alt+1" type="button">Chat</button>
+        <button class="tab" id="workTab" role="tab" aria-selected="false" aria-controls="workView" aria-keyshortcuts="Alt+2" type="button">Work</button>
+        <a class="tab tab-link" id="jarvisTab" role="tab" aria-selected="false" aria-controls="jarvisView" aria-keyshortcuts="Alt+3" href="#jarvisView">JARVIS</a>
       </nav>
       <div class="prototype-flag"><span></span> VISUAL PROTOTYPE</div>
     </header>
@@ -44,43 +44,7 @@
       </section>
 
       <section class="view jarvis-view" id="jarvisView" role="tabpanel" aria-labelledby="jarvisTab" hidden>
-        <div class="jarvis-hud">
-          <div><div class="jarvis-kicker">MOTHER AI <span> / </span> JARVIS CORE</div><h1>Presence interface</h1></div>
-          <div class="jarvis-state"><i></i><span id="jarvisStatus">CORE STANDBY · PROTOTYPE</span></div>
-        </div>
-        <div class="jarvis-stage" aria-label="JARVIS visual workspace">
-          <div class="space-grain" aria-hidden="true"></div>
-          <div class="star speck-one" aria-hidden="true"></div><div class="star speck-two" aria-hidden="true"></div><div class="star speck-three" aria-hidden="true"></div><div class="star speck-four" aria-hidden="true"></div><div class="star speck-five" aria-hidden="true"></div>
-          <div class="jarvis-visual-wrap">
-            <div class="core-halo" aria-hidden="true"></div>
-            <div class="core-system" id="coreSystem" role="img" aria-label="Golden JARVIS core with rotating orbital lines and points">
-              <div class="orbit orbit-a"><i class="orbit-point"></i><i class="orbit-point point-two"></i></div>
-              <div class="orbit orbit-b"><i class="orbit-point"></i><i class="orbit-point point-two"></i></div>
-              <div class="orbit orbit-c"><i class="orbit-point"></i></div>
-              <div class="orbit orbit-d"><i class="orbit-point"></i></div>
-              <div class="sun-corona"></div>
-              <div class="sun-core"><i></i><i></i><i></i><i></i><span></span></div>
-              <div class="core-sparks" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
-            </div>
-          </div>
-          <div class="zoom-controls" aria-label="JARVIS animation zoom controls">
-            <button id="zoomOut" type="button" aria-label="Zoom out">−</button><output id="zoomLevel" aria-live="polite">100%</output><button id="zoomIn" type="button" aria-label="Zoom in">+</button><button id="zoomReset" type="button">Reset</button>
-          </div>
-          <aside class="jarvis-console" aria-label="Talk with JARVIS">
-            <div class="console-head"><div><span class="console-label">LOCAL TEXT PROTOTYPE</span><h2>Talk with JARVIS</h2></div><span class="console-ready"><i></i> READY</span></div>
-            <div class="jarvis-active-task"><span>CURRENT WORK · DEMO</span><b id="jarvisCurrentTask">No active plan</b><span id="jarvisCurrentStatus">Create a request to add a plan to Work.</span></div>
-            <div class="jarvis-conversation" id="jarvisConversation" aria-live="polite">
-              <p class="jarvis-reply">I’m here. Type a request and I’ll create a local starter plan you can follow in Work.</p>
-            </div>
-            <form class="jarvis-composer" id="jarvisForm">
-              <label class="sr-only" for="jarvisInput">Type a request for JARVIS</label>
-              <textarea id="jarvisInput" rows="1" maxlength="500" placeholder="Type a request for JARVIS…"></textarea>
-              <button type="submit">Send</button>
-            </form>
-            <p class="computer-access-note">No microphone, AI, or computer controls are connected. This prototype does not perform actions on your device.</p>
-            <button id="openWorkButton" class="open-work-button" type="button">View progress in Work <span aria-hidden="true">↗</span></button>
-          </aside>
-        </div>
+        <canvas id="jarvisCanvas" role="img" aria-label="A radiant gold energy sphere with a bright core, rotating light filaments, and orbiting sparks on a black background"></canvas>
       </section>
 
       <section class="view" id="workView" role="tabpanel" aria-labelledby="workTab" hidden>
