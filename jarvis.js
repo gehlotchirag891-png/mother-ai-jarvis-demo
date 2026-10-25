@@ -13,6 +13,46 @@ const taskStatus = document.getElementById("taskStatus");
 const controlNote = document.getElementById("controlNote");
 const timeline = document.getElementById("timeline");
 const progressBar = document.querySelector(".progress-track");
+const jarvisCanvas = document.getElementById("jarvisCanvas");
+const jarvisContext = jarvisCanvas.getContext("2d", { alpha: false });
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+let jarvisFrame = 0;
+let canvasWidth = 0;
+let canvasHeight = 0;
+let canvasScale = 1;
+let lastJarvisDraw = 0;
+
+const energyPoints = Array.from({ length: 300 }, (_, index, all) => {
+  const y = 1 - (index / (all.length - 1)) * 2;
+  const ring = Math.sqrt(1 - y * y);
+  const angle = Math.PI * (3 - Math.sqrt(5)) * index;
+  return { x: Math.cos(angle) * ring, y, z: Math.sin(angle) * ring };
+});
+const energyEdges = [];
+energyPoints.forEach((point, index) => {
+  const nearest = energyPoints.map((other, otherIndex) => {
+    const dx = point.x - other.x;
+    const dy = point.y - other.y;
+    const dz = point.z - other.z;
+    return { otherIndex, distance: dx * dx + dy * dy + dz * dz };
+  }).filter((item) => item.otherIndex !== index).sort((a, b) => a.distance - b.distance).slice(0, 5);
+  nearest.forEach(({ otherIndex }) => {
+    if (otherIndex > index) energyEdges.push([index, otherIndex]);
+  });
+});
+const energySparks = Array.from({ length: 1100 }, () => {
+  const y = Math.random() * 2 - 1;
+  const angle = Math.random() * Math.PI * 2;
+  const ring = Math.sqrt(1 - y * y);
+  return {
+    x: Math.cos(angle) * ring,
+    y,
+    z: Math.sin(angle) * ring,
+    radius: 0.92 + Math.random() * 0.34,
+    size: 0.35 + Math.random() * 1.2,
+    phase: Math.random() * Math.PI * 2,
+  };
+});
 
 const loaded = window.JarvisWorkspaceStore.load();
 const workspace = loaded.workspace;
@@ -36,7 +76,7 @@ function saveWorkspace() {
   return persistentStorage;
 }
 
-function selectTab(index, focus = false) {
+function selectTab(index, focus = false, updateHash = true) {
   tabs.forEach((tab, i) => {
     const active = i === index;
     tab.classList.toggle("active", active);
@@ -45,6 +85,16 @@ function selectTab(index, focus = false) {
     views[i].hidden = !active;
     views[i].classList.toggle("active", active);
   });
+  const inJarvis = index === 2;
+  document.body.classList.toggle("jarvis-open", inJarvis);
+  if (updateHash) {
+    const hash = inJarvis ? "#jarvisView" : "";
+    if (window.location.hash !== hash) {
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
+    }
+  }
+  if (inJarvis) startJarvisAnimation();
+  else stopJarvisAnimation();
   if (focus) tabs[index].focus();
 }
 
@@ -62,7 +112,181 @@ tabs.forEach((tab, index) => {
   });
 });
 
-if (window.location.hash === "#jarvisView") selectTab(2);
+document.addEventListener("keydown", (event) => {
+  if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  const shortcutIndex = { "1": 0, "2": 1, "3": 2 }[event.key];
+  if (shortcutIndex === undefined) return;
+  event.preventDefault();
+  selectTab(shortcutIndex, shortcutIndex !== 2);
+});
+
+function resizeJarvisCanvas() {
+  canvasScale = Math.min(window.devicePixelRatio || 1, 1.25);
+  canvasWidth = window.innerWidth;
+  canvasHeight = window.innerHeight;
+  jarvisCanvas.width = Math.round(canvasWidth * canvasScale);
+  jarvisCanvas.height = Math.round(canvasHeight * canvasScale);
+  jarvisContext.setTransform(canvasScale, 0, 0, canvasScale, 0, 0);
+}
+
+function drawJarvisCore(time = 0) {
+  const ctx = jarvisContext;
+  const width = canvasWidth;
+  const height = canvasHeight;
+  const cx = width / 2;
+  const cy = height / 2;
+  const radius = Math.min(width, height) * 0.415;
+  const spin = time * 0.00016;
+  const tilt = 0.42 + Math.sin(time * 0.00021) * 0.08;
+  const sinY = Math.sin(spin);
+  const cosY = Math.cos(spin);
+  const sinX = Math.sin(tilt);
+  const cosX = Math.cos(tilt);
+  const projected = new Array(energyPoints.length);
+
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, width, height);
+  ctx.globalCompositeOperation = "lighter";
+
+  const atmosphere = ctx.createRadialGradient(cx, cy, radius * 0.04, cx, cy, radius * 1.25);
+  atmosphere.addColorStop(0, "rgba(255,151,21,0.12)");
+  atmosphere.addColorStop(0.48, "rgba(150,61,5,0.07)");
+  atmosphere.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = atmosphere;
+  ctx.fillRect(cx - radius * 1.3, cy - radius * 1.3, radius * 2.6, radius * 2.6);
+
+  for (let ray = 0; ray < 42; ray += 1) {
+    const angle = (ray / 42) * Math.PI * 2 + Math.sin(time * 0.00028 + ray) * 0.025;
+    const reach = radius * (0.72 + 0.3 * (0.5 + 0.5 * Math.sin(ray * 9.17)));
+    const gradient = ctx.createLinearGradient(cx, cy, cx + Math.cos(angle) * reach, cy + Math.sin(angle) * reach);
+    gradient.addColorStop(0, "rgba(255,239,165,0.92)");
+    gradient.addColorStop(0.25, "rgba(255,177,52,0.55)");
+    gradient.addColorStop(1, "rgba(224,100,14,0)");
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * radius * 0.12, cy + Math.sin(angle) * radius * 0.12);
+    ctx.lineTo(cx + Math.cos(angle) * reach, cy + Math.sin(angle) * reach);
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = ray % 4 === 0 ? 1.8 : 0.75;
+    ctx.stroke();
+  }
+
+  const orbitAngles = [spin * 0.7, -spin * 0.9 + 0.8, spin * 0.5 + 1.6];
+  orbitAngles.forEach((angle, index) => {
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, radius * (0.9 + index * 0.045), radius * (0.29 + index * 0.035), angle, 0, Math.PI * 2);
+    ctx.strokeStyle = index === 1 ? "rgba(255,204,91,0.36)" : "rgba(255,146,34,0.27)";
+    ctx.lineWidth = index === 1 ? 1.2 : 0.8;
+    ctx.stroke();
+  });
+
+  energyPoints.forEach((point, index) => {
+    const x1 = point.x * cosY + point.z * sinY;
+    const z1 = -point.x * sinY + point.z * cosY;
+    const y2 = point.y * cosX - z1 * sinX;
+    const z2 = point.y * sinX + z1 * cosX;
+    const perspective = 0.94 + z2 * 0.08;
+    projected[index] = { x: cx + x1 * radius * perspective, y: cy + y2 * radius * perspective, z: z2 };
+  });
+
+  energyEdges.forEach(([a, b]) => {
+    const p = projected[a];
+    const q = projected[b];
+    const depth = Math.max(0, (p.z + q.z + 2) / 4);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(q.x, q.y);
+    ctx.strokeStyle = `rgba(255,${Math.round(125 + depth * 80)},${Math.round(28 + depth * 24)},${0.12 + depth * 0.38})`;
+    ctx.lineWidth = 0.45 + depth * 0.55;
+    ctx.stroke();
+  });
+
+  energySparks.forEach((spark) => {
+    const x1 = spark.x * cosY + spark.z * sinY;
+    const z1 = -spark.x * sinY + spark.z * cosY;
+    const y2 = spark.y * cosX - z1 * sinX;
+    const z2 = spark.y * sinX + z1 * cosX;
+    const flicker = 0.2 + 0.8 * (0.5 + 0.5 * Math.sin(time * 0.003 + spark.phase));
+    const depthFade = 0.35 + (z2 + 1) * 0.32;
+    const distance = radius * spark.radius;
+    ctx.beginPath();
+    ctx.arc(cx + x1 * distance, cy + y2 * distance, spark.size * (0.55 + flicker * 0.5), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,${Math.round(145 + flicker * 85)},${Math.round(35 + flicker * 35)},${flicker * depthFade})`;
+    ctx.fill();
+  });
+
+  const coreRadius = radius * (0.23 + Math.sin(time * 0.0015) * 0.008);
+  const glow = ctx.createRadialGradient(cx, cy, coreRadius * 0.05, cx, cy, radius * 0.58);
+  glow.addColorStop(0, "rgba(255,255,219,0.98)");
+  glow.addColorStop(0.09, "rgba(255,239,130,0.95)");
+  glow.addColorStop(0.19, "rgba(255,184,47,0.72)");
+  glow.addColorStop(0.38, "rgba(255,111,14,0.19)");
+  glow.addColorStop(1, "rgba(255,88,0,0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius * 0.58, 0, Math.PI * 2);
+  ctx.fill();
+
+  for (let ray = 0; ray < 32; ray += 1) {
+    const angle = (ray / 32) * Math.PI * 2 - spin * 0.25;
+    const end = coreRadius * (1.25 + (ray % 5) * 0.18);
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * coreRadius * 0.7, cy + Math.sin(angle) * coreRadius * 0.7);
+    ctx.lineTo(cx + Math.cos(angle) * end, cy + Math.sin(angle) * end);
+    ctx.strokeStyle = "rgba(255,246,175,0.82)";
+    ctx.lineWidth = ray % 3 === 0 ? 1.3 : 0.7;
+    ctx.stroke();
+  }
+
+  const sun = ctx.createRadialGradient(cx - coreRadius * 0.25, cy - coreRadius * 0.28, coreRadius * 0.02, cx, cy, coreRadius);
+  sun.addColorStop(0, "#fffde5");
+  sun.addColorStop(0.28, "#fff2a0");
+  sun.addColorStop(0.63, "#ffc63e");
+  sun.addColorStop(1, "#ef8016");
+  ctx.fillStyle = sun;
+  ctx.beginPath();
+  ctx.arc(cx, cy, coreRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = "source-over";
+}
+
+function animateJarvis(time) {
+  if (!document.body.classList.contains("jarvis-open") || document.hidden) {
+    jarvisFrame = 0;
+    return;
+  }
+  if (!reduceMotion.matches && time - lastJarvisDraw < 1000 / 30) {
+    jarvisFrame = window.requestAnimationFrame(animateJarvis);
+    return;
+  }
+  lastJarvisDraw = time;
+  drawJarvisCore(time);
+  if (!reduceMotion.matches) jarvisFrame = window.requestAnimationFrame(animateJarvis);
+}
+
+function startJarvisAnimation() {
+  resizeJarvisCanvas();
+  if (jarvisFrame) return;
+  jarvisFrame = window.requestAnimationFrame(animateJarvis);
+}
+
+function stopJarvisAnimation() {
+  if (jarvisFrame) window.cancelAnimationFrame(jarvisFrame);
+  jarvisFrame = 0;
+}
+
+window.addEventListener("resize", () => {
+  if (document.body.classList.contains("jarvis-open")) resizeJarvisCanvas();
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) stopJarvisAnimation();
+  else if (document.body.classList.contains("jarvis-open")) startJarvisAnimation();
+});
+reduceMotion.addEventListener("change", () => {
+  if (document.body.classList.contains("jarvis-open")) {
+    stopJarvisAnimation();
+    startJarvisAnimation();
+  }
+});
 
 function currentPlan() {
   return workspace.plans.find((plan) => plan.id === workspace.activeId) || null;
@@ -224,14 +448,6 @@ function statusLabel(plan) {
     stopped: "Stopped",
     complete: "Complete",
   }[plan.status] || "Saved";
-}
-
-function updateJarvisSummary() {
-  const plan = currentPlan();
-  document.getElementById("jarvisCurrentTask").textContent = plan ? plan.title : "No active plan";
-  document.getElementById("jarvisCurrentStatus").textContent = plan
-    ? `${statusLabel(plan)} · progress appears in Work`
-    : "Create a request to add a plan to Work.";
 }
 
 function renderTaskList() {
@@ -401,7 +617,6 @@ function renderActiveTask() {
 function renderWorkspace() {
   renderTaskList();
   renderActiveTask();
-  updateJarvisSummary();
 }
 
 function selectPlan(id) {
@@ -504,79 +719,10 @@ cancelButton.addEventListener("click", () => {
   renderWorkspace();
 });
 
-function addJarvisMessage(kind, text) {
-  const bubble = document.createElement("p");
-  bubble.className = kind === "user" ? "jarvis-user-message" : "jarvis-reply";
-  bubble.textContent = text;
-  document.getElementById("jarvisConversation").append(bubble);
-  bubble.scrollIntoView({ block: "nearest", behavior: "smooth" });
-}
-
-document.getElementById("jarvisForm").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const jarvisInput = document.getElementById("jarvisInput");
-  const request = jarvisInput.value.trim();
-  if (!request) return;
-
-  pauseRunningPlan("Paused while you added a JARVIS request.");
-  addJarvisMessage("user", request);
-  jarvisInput.value = "";
-  jarvisInput.disabled = true;
-  const send = document.querySelector("#jarvisForm button[type=submit]");
-  send.disabled = true;
-  document.getElementById("jarvisStatus").textContent = "THINKING · LOCAL SIMULATION";
-  document.getElementById("coreSystem").dataset.state = "thinking";
-  document.getElementById("jarvisCurrentStatus").textContent = "Preparing a local starter plan…";
-
-  window.setTimeout(() => {
-    const plan = makePlan(request);
-    plan.approved = true;
-    plan.status = "ready";
-    workspace.plans.push(plan);
-    workspace.activeId = plan.id;
-    saveWorkspace();
-    renderChat();
-    renderWorkspace();
-    addJarvisMessage("assistant", `I made a local starter plan for “${plan.title}”. Open Work to review its steps and watch a simulated walkthrough. I’m not connected to an AI or computer controls in this prototype.`);
-    document.getElementById("jarvisStatus").textContent = "CORE STANDBY · PROTOTYPE";
-    document.getElementById("coreSystem").dataset.state = "idle";
-    jarvisInput.disabled = false;
-    send.disabled = false;
-    jarvisInput.focus();
-  }, 650);
-});
-
-document.getElementById("jarvisInput").addEventListener("keydown", (event) => {
-  if (event.key === "Enter" && !event.shiftKey) {
-    event.preventDefault();
-    document.getElementById("jarvisForm").requestSubmit();
-  }
-});
-
-document.getElementById("openWorkButton").addEventListener("click", () => selectTab(1));
-
-let coreZoom = 1;
-function applyCoreZoom() {
-  document.getElementById("coreSystem").style.setProperty("--core-zoom", coreZoom.toFixed(2));
-  document.getElementById("zoomLevel").value = `${Math.round(coreZoom * 100)}%`;
-}
-document.getElementById("zoomIn").addEventListener("click", () => {
-  coreZoom = Math.min(1.6, Math.round((coreZoom + 0.1) * 10) / 10);
-  applyCoreZoom();
-});
-document.getElementById("zoomOut").addEventListener("click", () => {
-  coreZoom = Math.max(0.6, Math.round((coreZoom - 0.1) * 10) / 10);
-  applyCoreZoom();
-});
-document.getElementById("zoomReset").addEventListener("click", () => {
-  coreZoom = 1;
-  applyCoreZoom();
-});
-
 if (!workspace.plans.some((plan) => plan.id === workspace.activeId)) {
   workspace.activeId = workspace.plans.at(-1)?.id || null;
 }
 renderChat();
 renderWorkspace();
-selectTab(0);
+selectTab(window.location.hash === "#jarvisView" ? 2 : 0, false, false);
 
