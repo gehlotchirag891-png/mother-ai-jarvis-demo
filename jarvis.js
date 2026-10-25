@@ -22,8 +22,9 @@ let canvasHeight = 0;
 let canvasScale = 1;
 let lastJarvisDraw = 0;
 
-const energyPoints = Array.from({ length: 300 }, (_, index, all) => {
-  const y = 1 - (index / (all.length - 1)) * 2;
+const energyPointCount = 300;
+const energyPoints = Array.from({ length: energyPointCount }, (_, index) => {
+  const y = 1 - (index / (energyPointCount - 1)) * 2;
   const ring = Math.sqrt(1 - y * y);
   const angle = Math.PI * (3 - Math.sqrt(5)) * index;
   return { x: Math.cos(angle) * ring, y, z: Math.sin(angle) * ring };
