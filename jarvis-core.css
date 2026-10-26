@@ -3,9 +3,9 @@
 body.jarvis-open{overflow:hidden;background:#000}
 body.jarvis-open .topbar{display:none}
 body.jarvis-open main{position:static}
-#jarvisCanvas{display:block;width:100%;height:100%;background:#000;touch-action:none}
+#jarvisCanvas{position:absolute;inset:0;z-index:2;display:block;width:100%;height:100%;background:transparent;touch-action:none}
+.plasma-canvas{position:absolute;inset:0;z-index:1;display:block;width:100%;height:100%;background:#000;touch-action:none}
 .tab-link{display:grid;place-items:center;text-decoration:none}
 #jarvisView:target{display:block!important}
 main:has(#jarvisView:target) #chatView,main:has(#jarvisView:target) #workView{display:none!important}
 @media(prefers-reduced-motion:reduce){#jarvisCanvas{animation:none}}
-

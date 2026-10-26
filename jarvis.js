@@ -14,7 +14,7 @@ const controlNote = document.getElementById("controlNote");
 const timeline = document.getElementById("timeline");
 const progressBar = document.querySelector(".progress-track");
 const jarvisCanvas = document.getElementById("jarvisCanvas");
-const jarvisContext = jarvisCanvas.getContext("2d", { alpha: false });
+const jarvisContext = jarvisCanvas.getContext("2d", { alpha: true });
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 let jarvisFrame = 0;
 let canvasWidth = 0;
@@ -145,8 +145,7 @@ function drawJarvisCore(time = 0) {
   const cosX = Math.cos(tilt);
   const projected = new Array(energyPoints.length);
 
-  ctx.fillStyle = "#000000";
-  ctx.fillRect(0, 0, width, height);
+  ctx.clearRect(0, 0, width, height);
   ctx.globalCompositeOperation = "lighter";
 
   const atmosphere = ctx.createRadialGradient(cx, cy, radius * 0.04, cx, cy, radius * 1.25);
@@ -348,27 +347,18 @@ function animateJarvis(time) {
 
 function startJarvisAnimation() {
   resizeJarvisCanvas();
-  if (jarvisFrame) return;
-  jarvisFrame = window.requestAnimationFrame(animateJarvis);
+  window.MotherPlasmaSphere?.start();
+  if (!jarvisFrame) jarvisFrame = window.requestAnimationFrame(animateJarvis);
 }
 
 function stopJarvisAnimation() {
+  window.MotherPlasmaSphere?.stop();
   if (jarvisFrame) window.cancelAnimationFrame(jarvisFrame);
   jarvisFrame = 0;
 }
 
 window.addEventListener("resize", () => {
   if (document.body.classList.contains("jarvis-open")) resizeJarvisCanvas();
-});
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) stopJarvisAnimation();
-  else if (document.body.classList.contains("jarvis-open")) startJarvisAnimation();
-});
-reduceMotion.addEventListener("change", () => {
-  if (document.body.classList.contains("jarvis-open")) {
-    stopJarvisAnimation();
-    startJarvisAnimation();
-  }
 });
 
 function currentPlan() {
