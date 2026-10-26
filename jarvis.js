@@ -41,7 +41,7 @@ energyPoints.forEach((point, index) => {
     if (otherIndex > index) energyEdges.push([index, otherIndex]);
   });
 });
-const energySparks = Array.from({ length: 1100 }, () => {
+const energySparks = Array.from({ length: 1700 }, () => {
   const y = Math.random() * 2 - 1;
   const angle = Math.random() * Math.PI * 2;
   const ring = Math.sqrt(1 - y * y);
@@ -50,7 +50,7 @@ const energySparks = Array.from({ length: 1100 }, () => {
     y,
     z: Math.sin(angle) * ring,
     radius: 0.92 + Math.random() * 0.34,
-    size: 0.35 + Math.random() * 1.2,
+    size: 0.45 + Math.random() * 1.75,
     phase: Math.random() * Math.PI * 2,
   };
 });
@@ -136,7 +136,7 @@ function drawJarvisCore(time = 0) {
   const height = canvasHeight;
   const cx = width / 2;
   const cy = height / 2;
-  const radius = Math.min(width, height) * 0.415;
+  const radius = Math.min(width, height) * 0.45;
   const spin = time * 0.00016;
   const tilt = 0.42 + Math.sin(time * 0.00021) * 0.08;
   const sinY = Math.sin(spin);
@@ -156,27 +156,99 @@ function drawJarvisCore(time = 0) {
   ctx.fillStyle = atmosphere;
   ctx.fillRect(cx - radius * 1.3, cy - radius * 1.3, radius * 2.6, radius * 2.6);
 
-  for (let ray = 0; ray < 42; ray += 1) {
-    const angle = (ray / 42) * Math.PI * 2 + Math.sin(time * 0.00028 + ray) * 0.025;
-    const reach = radius * (0.72 + 0.3 * (0.5 + 0.5 * Math.sin(ray * 9.17)));
+  for (let ray = 0; ray < 64; ray += 1) {
+    const angle = (ray / 64) * Math.PI * 2 + Math.sin(time * 0.00028 + ray) * 0.025;
+    const reach = radius * (0.88 + 0.52 * (0.5 + 0.5 * Math.sin(ray * 9.17)));
     const gradient = ctx.createLinearGradient(cx, cy, cx + Math.cos(angle) * reach, cy + Math.sin(angle) * reach);
-    gradient.addColorStop(0, "rgba(255,239,165,0.92)");
-    gradient.addColorStop(0.25, "rgba(255,177,52,0.55)");
+    gradient.addColorStop(0, "rgba(255,250,198,1)");
+    gradient.addColorStop(0.22, "rgba(255,177,52,0.78)");
     gradient.addColorStop(1, "rgba(224,100,14,0)");
     ctx.beginPath();
     ctx.moveTo(cx + Math.cos(angle) * radius * 0.12, cy + Math.sin(angle) * radius * 0.12);
     ctx.lineTo(cx + Math.cos(angle) * reach, cy + Math.sin(angle) * reach);
     ctx.strokeStyle = gradient;
-    ctx.lineWidth = ray % 4 === 0 ? 1.8 : 0.75;
+    ctx.lineWidth = ray % 8 === 0 ? 3.2 : ray % 3 === 0 ? 1.8 : 0.85;
     ctx.stroke();
   }
 
-  const orbitAngles = [spin * 0.7, -spin * 0.9 + 0.8, spin * 0.5 + 1.6];
-  orbitAngles.forEach((angle, index) => {
+  // Broad tilted energy bands create the interwoven, fast-moving orbital form
+  // in the user's reference instead of a tidy wireframe-only globe.
+  const bands = [
+    { tilt: -0.9, bank: 0.34, rx: 1.08, ry: 0.72, speed: 0.82, color: [255, 214, 104], width: 5.2 },
+    { tilt: 0.82, bank: -0.52, rx: 1.02, ry: 0.66, speed: -0.68, color: [255, 154, 43], width: 3.8 },
+    { tilt: 0.32, bank: 0.92, rx: 0.94, ry: 0.78, speed: 1.05, color: [255, 229, 129], width: 2.8 },
+    { tilt: -0.42, bank: -1.24, rx: 0.86, ry: 0.61, speed: -0.92, color: [255, 123, 30], width: 2.1 },
+    { tilt: 1.08, bank: 1.5, rx: 0.72, ry: 0.73, speed: 0.58, color: [255, 190, 68], width: 1.6 },
+  ];
+  bands.forEach((band, bandIndex) => {
+    const rotation = spin * band.speed + band.bank;
+    const segments = 220;
+    const points = [];
+    for (let i = 0; i <= segments; i += 1) {
+      const a = (i / segments) * Math.PI * 2;
+      const wobble = 1 + 0.025 * Math.sin(a * 7 + time * 0.0012 + bandIndex);
+      const x = Math.cos(a) * radius * band.rx * wobble;
+      const y = Math.sin(a) * radius * band.ry * wobble;
+      const zTilt = y * Math.sin(band.tilt);
+      const yTilt = y * Math.cos(band.tilt);
+      const xBank = x * Math.cos(rotation) - zTilt * Math.sin(rotation);
+      const zBank = x * Math.sin(rotation) + zTilt * Math.cos(rotation);
+      const yBank = yTilt * Math.cos(band.tilt * 0.35) - zBank * Math.sin(band.tilt * 0.35);
+      const zFinal = yTilt * Math.sin(band.tilt * 0.35) + zBank * Math.cos(band.tilt * 0.35);
+      const depth = 0.9 + zFinal / (radius * 4.5);
+      points.push({ x: cx + xBank * depth, y: cy + yBank * depth, z: zFinal });
+    }
+    // Draw a soft molten underglow, then a bright narrow filament.
+    for (const pass of [{ width: band.width * 3.5, alpha: 0.13 }, { width: band.width, alpha: 0.78 }]) {
+      ctx.beginPath();
+      points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+      ctx.closePath();
+      ctx.strokeStyle = `rgba(${band.color[0]},${band.color[1]},${band.color[2]},${pass.alpha})`;
+      ctx.lineWidth = pass.width;
+      ctx.lineJoin = "round";
+      ctx.stroke();
+    }
+    // Interrupted hot segments add a sparkling, turbulent edge to each band.
+    for (let i = bandIndex * 13; i < segments; i += 9) {
+      const p = points[i];
+      const q = points[Math.min(i + 3, segments)];
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+      ctx.strokeStyle = `rgba(255,248,184,${0.28 + 0.28 * Math.sin(i + time * 0.004)})`;
+      ctx.lineWidth = band.width * 0.9; ctx.stroke();
+    }
+  });
+
+  // Woven spherical filaments make the center feel like a tangled energy
+  // sphere rather than a set of flat planetary rings.
+  const wraps = [
+    { waves: 2, phase: 0.2, amplitude: 0.76, color: "rgba(255,226,129,0.68)", width: 2.2 },
+    { waves: 3, phase: 1.4, amplitude: 0.69, color: "rgba(255,158,48,0.62)", width: 1.8 },
+    { waves: 4, phase: 2.7, amplitude: 0.61, color: "rgba(255,205,91,0.56)", width: 1.5 },
+    { waves: 5, phase: 4.1, amplitude: 0.53, color: "rgba(255,123,31,0.52)", width: 1.2 },
+    { waves: 3, phase: 5.2, amplitude: 0.83, color: "rgba(255,242,177,0.44)", width: 1.1 },
+  ];
+  wraps.forEach((wrap, wi) => {
     ctx.beginPath();
-    ctx.ellipse(cx, cy, radius * (0.9 + index * 0.045), radius * (0.29 + index * 0.035), angle, 0, Math.PI * 2);
-    ctx.strokeStyle = index === 1 ? "rgba(255,204,91,0.36)" : "rgba(255,146,34,0.27)";
-    ctx.lineWidth = index === 1 ? 1.2 : 0.8;
+    const steps = 360;
+    for (let i = 0; i <= steps; i += 1) {
+      const t = (i / steps) * Math.PI * 2;
+      const latitude = wrap.amplitude * Math.sin(wrap.waves * t + wrap.phase + spin * (wi % 2 ? -0.7 : 0.6));
+      const cosLat = Math.cos(latitude);
+      const x = cosLat * Math.cos(t + spin * (0.55 + wi * 0.07));
+      const y = Math.sin(latitude);
+      const z = cosLat * Math.sin(t + spin * (0.55 + wi * 0.07));
+      const x1 = x * cosY + z * sinY;
+      const z1 = -x * sinY + z * cosY;
+      const y2 = y * cosX - z1 * sinX;
+      const z2 = y * sinX + z1 * cosX;
+      const perspective = 0.9 + z2 * 0.11;
+      const px = cx + x1 * radius * 0.94 * perspective;
+      const py = cy + y2 * radius * 0.94 * perspective;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = wrap.color;
+    ctx.lineWidth = wrap.width;
     ctx.stroke();
   });
 
@@ -196,8 +268,8 @@ function drawJarvisCore(time = 0) {
     ctx.beginPath();
     ctx.moveTo(p.x, p.y);
     ctx.lineTo(q.x, q.y);
-    ctx.strokeStyle = `rgba(255,${Math.round(125 + depth * 80)},${Math.round(28 + depth * 24)},${0.12 + depth * 0.38})`;
-    ctx.lineWidth = 0.45 + depth * 0.55;
+    ctx.strokeStyle = `rgba(255,${Math.round(125 + depth * 80)},${Math.round(28 + depth * 24)},${0.06 + depth * 0.2})`;
+    ctx.lineWidth = 0.3 + depth * 0.24;
     ctx.stroke();
   });
 
@@ -209,18 +281,28 @@ function drawJarvisCore(time = 0) {
     const flicker = 0.2 + 0.8 * (0.5 + 0.5 * Math.sin(time * 0.003 + spark.phase));
     const depthFade = 0.35 + (z2 + 1) * 0.32;
     const distance = radius * spark.radius;
+    const px = cx + x1 * distance;
+    const py = cy + y2 * distance;
+    if (flicker > 0.78 && spark.size > 0.8) {
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px - Math.sin(time * 0.001 + spark.phase) * spark.size * 4, py - spark.size * 5);
+      ctx.strokeStyle = `rgba(255,185,62,${0.25 * depthFade})`;
+      ctx.lineWidth = 0.7;
+      ctx.stroke();
+    }
     ctx.beginPath();
-    ctx.arc(cx + x1 * distance, cy + y2 * distance, spark.size * (0.55 + flicker * 0.5), 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,${Math.round(145 + flicker * 85)},${Math.round(35 + flicker * 35)},${flicker * depthFade})`;
+    ctx.arc(px, py, spark.size * (0.65 + flicker * 0.7), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,${Math.round(166 + flicker * 89)},${Math.round(42 + flicker * 45)},${flicker * depthFade})`;
     ctx.fill();
   });
 
-  const coreRadius = radius * (0.23 + Math.sin(time * 0.0015) * 0.008);
+  const coreRadius = radius * (0.145 + Math.sin(time * 0.0015) * 0.012);
   const glow = ctx.createRadialGradient(cx, cy, coreRadius * 0.05, cx, cy, radius * 0.58);
   glow.addColorStop(0, "rgba(255,255,219,0.98)");
   glow.addColorStop(0.09, "rgba(255,239,130,0.95)");
   glow.addColorStop(0.19, "rgba(255,184,47,0.72)");
-  glow.addColorStop(0.38, "rgba(255,111,14,0.19)");
+  glow.addColorStop(0.38, "rgba(255,111,14,0.32)");
   glow.addColorStop(1, "rgba(255,88,0,0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
@@ -726,4 +808,3 @@ if (!workspace.plans.some((plan) => plan.id === workspace.activeId)) {
 renderChat();
 renderWorkspace();
 selectTab(window.location.hash === "#jarvisView" ? 2 : 0, false, false);
-
