@@ -1,21 +1,49 @@
-.jarvis-view{position:fixed;inset:0;z-index:20;width:100vw;height:100vh;height:100dvh;max-width:none;min-height:0;margin:0;padding:0;overflow:auto;background:#000;color:#d9f8fa;font-family:"Roboto Mono",Consolas,monospace}
+.jarvis-view{position:fixed;inset:0;z-index:20;width:100vw;height:100vh;height:100dvh;max-width:none;min-height:0;margin:0;padding:0;overflow:hidden;background:#000;color:#d9f8fa;font-family:"Roboto Mono",Consolas,monospace}
 .jarvis-view[hidden]{display:none!important}
 body.jarvis-open{overflow:hidden;background:#000}
-body.jarvis-open .topbar{display:none}
+body.jarvis-open .topbar{position:fixed;inset:0 0 auto;z-index:30;height:58px;padding:0;display:grid;grid-template-columns:1fr;border:0;background:linear-gradient(180deg,#000b,transparent)}
+body.jarvis-open .brand,body.jarvis-open .prototype-flag{display:none}
+body.jarvis-open .tabs{justify-self:center;height:38px;border-color:#143036;background:#02090bd9;backdrop-filter:blur(12px)}
+body.jarvis-open .tab{min-width:76px;color:#80a6ab;font-size:11px}
+body.jarvis-open .tab.active{color:#d7fbff;background:#12343a;box-shadow:inset 0 0 0 1px #2e8590,0 0 18px #19c7db20}
 body.jarvis-open main{position:static}
-.jarvis-view .jarvis-main{min-height:100%;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px;background:#000}
-.jarvis-view .image-container{width:min(100%,620px);padding:10px;text-align:center}
-.jarvis-view .image{width:100%;display:flex;align-items:center;justify-content:center}
-.jarvis-view .image img{display:block;width:min(350px,76vw);height:auto;max-height:48vh;object-fit:contain}
-.jarvis-view .image-container h1{margin:16px 0 10px;color:#00bcd4;font-family:"Roboto Mono",Consolas,monospace;font-size:clamp(28px,5vw,40px);font-weight:600;letter-spacing:.1em}
-.jarvis-view .image-container p{margin:0 0 34px;color:#a7c6c8;font-size:clamp(12px,2vw,15px);line-height:1.6}
-.jarvis-view .jarvis-input{display:flex;align-items:center;justify-content:center;width:min(90vw,460px);min-height:54px;border:1px solid #24474b;border-radius:20px;background:#122326}
-.jarvis-view .talk{display:grid;place-items:center;flex:0 0 54px;width:54px;height:54px;border:0;border-radius:50%;background:transparent;color:#d1f4f5;cursor:pointer}
-.jarvis-view .talk svg{width:23px;height:23px;fill:currentColor}
-.jarvis-view .content{margin:0;padding:0 18px 0 0;color:#d1f4f5;font-size:clamp(12px,2vw,15px);line-height:1.5;text-align:center;overflow-wrap:anywhere}
-.jarvis-view .talk:focus-visible{outline:2px solid #00bcd4;outline-offset:3px}
+.jarvis-view .jarvis-main{min-height:100%;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:58px 16px 32px;background:#000}
+.jarvis-view .image-container{width:min(100%,560px);display:grid;place-items:center;padding:10px}
+.jarvis-view .image{position:relative;width:min(420px,78vw);aspect-ratio:1;display:grid;place-items:center;isolation:isolate}
+.jarvis-view .image::before,.jarvis-view .image::after{content:"";position:absolute;inset:5%;z-index:-1;border:1px solid #35ddf244;border-radius:50%;box-shadow:0 0 26px #16c9e124,inset 0 0 28px #14aabd14;transform:scaleY(.74) rotate(-19deg);animation:jarvis-orbit 13s linear infinite}
+.jarvis-view .image::after{inset:1%;border-style:dashed;border-color:#75edff37;transform:scaleY(.82) rotate(29deg);animation-duration:21s;animation-direction:reverse}
+.jarvis-view .image img{display:block;width:100%;height:100%;object-fit:contain;mix-blend-mode:screen;clip-path:circle(39% at 50% 50%);filter:drop-shadow(0 0 22px #19c8ff55);transform:scale(.96);transition:transform .42s ease,filter .42s ease;animation:jarvis-idle 4.2s ease-in-out infinite}
+body[data-jarvis-state="listening"] .jarvis-view .image img,body[data-jarvis-state="listening"] .dock-visual img{transform:scale(1.09);filter:drop-shadow(0 0 34px #36dffc99)}
+body[data-jarvis-state="processing"] .jarvis-view .image img,body[data-jarvis-state="processing"] .dock-visual img{transform:scale(1.03);filter:drop-shadow(0 0 42px #d8a9ff99)}
+body[data-jarvis-state="speaking"] .jarvis-view .image img,body[data-jarvis-state="speaking"] .dock-visual img{animation:jarvis-speaking .82s ease-in-out infinite;filter:drop-shadow(0 0 42px #46e5ffcc)}
+.jarvis-view .jarvis-controls{position:fixed;left:50%;bottom:clamp(20px,5vh,42px);z-index:31;transform:translateX(-50%)}
+.jarvis-view .talk,.jarvis-dock .talk{display:grid;place-items:center;width:48px;height:48px;border:1px solid #29616a;border-radius:50%;background:#061518d9;color:#c8fbff;box-shadow:0 0 22px #19bfd533;cursor:pointer;transition:background .18s,box-shadow .18s,transform .18s}
+.jarvis-view .talk:hover,.jarvis-dock .talk:hover{background:#0b2a30;box-shadow:0 0 30px #19bfd566;transform:scale(1.06)}
+.jarvis-view .talk svg,.jarvis-dock .talk svg{width:21px;height:21px;fill:currentColor}
+.jarvis-view .talk[aria-pressed="true"],.jarvis-dock .talk[aria-pressed="true"]{background:#0e5360;box-shadow:0 0 32px #19dbf099}
+.jarvis-view .content{display:none}
+.jarvis-view .dock-trigger{position:fixed;right:16px;bottom:18px;z-index:31;padding:7px 12px;border:1px solid #153940;border-radius:999px;background:#02090bd9;color:#83bdc4;font:11px "Roboto Mono",Consolas,monospace;cursor:pointer}
+.jarvis-dock{position:fixed;right:16px;bottom:16px;z-index:50;display:flex;align-items:center;gap:8px;padding:7px;border:1px solid #1c6972;border-radius:999px;background:#02090bea;box-shadow:0 0 24px #16bcd533;backdrop-filter:blur(12px)}
+.jarvis-dock[hidden]{display:none!important}
+.dock-visual{width:38px;height:38px;overflow:hidden;border-radius:50%;box-shadow:0 0 15px #1ec8ff55}
+.dock-visual img{width:100%;height:100%;object-fit:cover;transform:scale(.96);transition:transform .3s,filter .3s;animation:jarvis-idle 4s ease-in-out infinite}
+.jarvis-dock .talk{width:36px;height:36px}
+.jarvis-dock .talk svg{width:17px;height:17px}
+.dock-expand{width:30px;height:30px;border:0;border-radius:50%;background:#10333a;color:#b9f5fa;font-size:18px;cursor:pointer}
+body.jarvis-docked .jarvis-view{display:none!important}
+body.jarvis-docked .topbar{position:relative;inset:auto;z-index:10}
+body.jarvis-docked .brand,body.jarvis-docked .prototype-flag{display:flex}
+body.jarvis-docked .tabs{justify-self:auto}
 .tab-link{display:grid;place-items:center;text-decoration:none}
 #jarvisView:target{display:block!important}
 main:has(#jarvisView:target) #chatView,main:has(#jarvisView:target) #workView{display:none!important}
-@media(max-width:480px){.jarvis-view .image-container{padding:8px}.jarvis-view .image-container p{margin-bottom:25px}.jarvis-view .image img{width:min(320px,82vw);max-height:44vh}}
-@media(prefers-reduced-motion:reduce){.jarvis-view *{scroll-behavior:auto!important;transition:none!important}}
+@keyframes jarvis-orbit{to{rotate:360deg}}
+@keyframes jarvis-idle{0%,100%{transform:scale(.96)}50%{transform:scale(1.01)}}
+@keyframes jarvis-speaking{0%,100%{transform:scale(.97)}50%{transform:scale(1.13)}}
+@media(max-width:480px){body.jarvis-open .topbar{height:52px}body.jarvis-open .tab{min-width:68px}.jarvis-view .image{width:min(360px,78vw)}.jarvis-view .dock-trigger{right:10px;bottom:12px}.jarvis-view .jarvis-controls{bottom:22px}.jarvis-dock{right:10px;bottom:10px}}
+@media(prefers-reduced-motion:reduce){.jarvis-view .image::before,.jarvis-view .image::after,.jarvis-view .image img,.dock-visual img{animation:none!important;transition:none!important}body[data-jarvis-state="listening"] .jarvis-view .image img,body[data-jarvis-state="speaking"] .jarvis-view .image img{transform:scale(1.06)}}
+
+
+
+#jarvisView[hidden]{display:none!important}
+

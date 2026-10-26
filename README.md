@@ -1,36 +1,37 @@
 # Mother AI · JARVIS demo
 
-A lightweight static prototype of the Mother AI project overview and its Chat, Work, and JARVIS views. There is no build step or package installation.
+A lightweight static prototype with a project overview and Chat, Work, and JARVIS views. There is no build step or package installation.
 
 ## Run it locally
 
 1. Open this folder in VS Code.
-2. Start a static preview using the Live Server extension if it is already available, or run `python -m http.server 8000` from this folder.
-3. Open `http://localhost:8000/` in a browser. Select **Try the interactive demo** to open Chat, Work, and JARVIS.
+2. Start a static preview using Live Server if it is already available, or run `python -m http.server 8000` from this folder.
+3. Open `http://localhost:8000/` in a browser. Select **Try the interactive demo**.
 
-You can also open `index.html` directly in a modern browser. Browser storage behavior for local files can vary, so a local web preview is recommended when checking saved plans.
+## What it does
 
-## What the prototype does
+- Create starter plans in Chat and save/review them in Work. Progress is a local simulation.
+- Show the supplied animated visual on a black screen, without a heading or welcome text. Chat, Work, and JARVIS tabs remain at the top.
+- Add subtle orbit rings and an audio-reactive pulse: the visual expands while listening and pulses while speaking.
+- Greet once when the JARVIS tab is first opened in a fresh page session: “Hey, boss. What's new?”
+- Click the microphone once to begin a voice conversation. It listens for one phrase at a time and resumes after a spoken response. Click again to stop. Silence and browser errors are reported as status feedback; they are not treated as assistant replies.
+- Use **Dock** to keep a compact assistant widget visible while switching between this page's Chat and Work tabs. The dock includes its own microphone and expand control.
+- Switch tabs with `Alt+1`, `Alt+2`, `Alt+3`, or arrow keys when the tab list is focused.
 
-- Create starter plans in Chat and save/review them in Work.
-- Keep plans and simulated progress in the current browser using local storage.
-- Pause or stop the visual walkthrough; it does not execute tasks.
-- Show a black, full-screen JARVIS view with the supplied animated GIF, cyan title, tagline, and microphone button.
-- Switch tabs with `Alt+1` for Chat, `Alt+2` for Work, and `Alt+3` for JARVIS. The arrow keys also move between tabs when the tab list has focus.
-- Start voice recognition only after the user clicks the microphone. In supported browsers, simple greetings, date/time, and a few web-opening/search commands are handled; spoken responses use browser speech synthesis.
+## Limits and privacy
 
-## Privacy and limits
+Voice input uses the browser's SpeechRecognition support and requires microphone permission. Recognition availability and processing depend on the browser; some browsers rely on an online speech service. The visual state reacts to the browser's listening and speech-synthesis events. The microphone does not start until clicked.
 
-Plan text and demo progress stay in the current browser profile. They are not uploaded, shared with other visitors, or synchronized between devices. Clearing browser site data removes them. The JARVIS GIF is loaded from `https://iili.io/FapFCu9.gif`, so the browser must be able to reach that image host.
+Dock keeps the assistant available across views in this page. A web page cannot guarantee an ongoing microphone session when the browser tab is hidden, the app is minimized, or the device sleeps; browsers may pause or stop voice services in those states. This prototype has no AI model or backend. It only handles simple greetings, date/time, and selected website/search commands. It does not provide general computer access or execute system tasks.
 
-Voice input depends on browser support and microphone permission. Speech recognition may be processed by the browser's speech service; processing and privacy behavior depend on the browser. The microphone is not activated automatically. The demo does not implement a wake word, an AI model, a backend, general computer access, background workers, or system automation. A few voice commands open websites or web searches in a new tab; there is no Calculator launch or arbitrary app control. JARVIS does not greet or speak on page load.
+Saved plans and demo progress stay in the current browser profile. They are not uploaded or synchronized. The visual GIF is loaded from `https://iili.io/FapFCu9.gif`, so the browser needs access to that host.
 
 ## Files
 
 - `index.html` — project overview.
-- `demo.html` — Chat, Work, and JARVIS markup and current asset links.
-- `site.css`, `jarvis.css`, `workspace.css`, `jarvis-core.css` — overview, shared, workspace, and JARVIS styles.
-- `jarvis.js` and `jarvis-v0605.js` — tab shortcuts and local Chat/Work prototype behavior; JARVIS no longer renders the old Canvas animation.
-- `jarvis-voice.js` and `jarvis-voice-v0605.js` — click-to-start browser voice interaction and spoken responses.
+- `demo.html` — Chat, Work, and JARVIS markup and active asset links.
+- `jarvis.css`, `workspace.css`, `jarvis-core.css` — shared, workspace, and JARVIS styles.
+- `jarvis.js`, `jarvis-v0609.js` — tab navigation, greeting trigger, and dock behavior.
+- `jarvis-voice.js`, `jarvis-voice-v0609.js` — voice recognition, error handling, speech response, and visual states.
 - `workspace-store.js` — versioned browser-storage helper.
-- `plasma-sphere-v0604.js` and earlier versioned JARVIS scripts are historical files and are not loaded by the current demo page.
+- Earlier animation files are historical and are not loaded by the current demo.

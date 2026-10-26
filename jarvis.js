@@ -13,6 +13,7 @@ const taskStatus = document.getElementById("taskStatus");
 const controlNote = document.getElementById("controlNote");
 const timeline = document.getElementById("timeline");
 const progressBar = document.querySelector(".progress-track");
+const jarvisDock = document.getElementById("jarvisDock");
 
 const loaded = window.JarvisWorkspaceStore.load();
 const workspace = loaded.workspace;
@@ -46,7 +47,9 @@ function selectTab(index, focus = false, updateHash = true) {
     views[i].classList.toggle("active", active);
   });
   const inJarvis = index === 2;
+  if (inJarvis) document.body.classList.remove("jarvis-docked");
   document.body.classList.toggle("jarvis-open", inJarvis);
+  if (jarvisDock) jarvisDock.hidden = !document.body.classList.contains("jarvis-docked");
   if (updateHash) {
     const hash = inJarvis ? "#jarvisView" : "";
     if (window.location.hash !== hash) {
@@ -58,8 +61,16 @@ function selectTab(index, focus = false, updateHash = true) {
   if (focus) tabs[index].focus();
 }
 
+function selectTabFromUser(index, focus = false) {
+  selectTab(index, focus);
+  if (index === 2) window.JarvisVoice?.greetOnce();
+}
+
 tabs.forEach((tab, index) => {
-  tab.addEventListener("click", () => selectTab(index));
+  tab.addEventListener("click", (event) => {
+    if (tab.tagName === "A") event.preventDefault();
+    selectTabFromUser(index);
+  });
   tab.addEventListener("keydown", (event) => {
     let next = index;
     if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
@@ -68,7 +79,7 @@ tabs.forEach((tab, index) => {
     else if (event.key === "End") next = tabs.length - 1;
     else return;
     event.preventDefault();
-    selectTab(next, true);
+    selectTabFromUser(next, true);
   });
 });
 
@@ -77,7 +88,7 @@ document.addEventListener("keydown", (event) => {
   const shortcutIndex = { "1": 0, "2": 1, "3": 2 }[event.key];
   if (shortcutIndex === undefined) return;
   event.preventDefault();
-  selectTab(shortcutIndex, shortcutIndex !== 2);
+  selectTabFromUser(shortcutIndex, shortcutIndex !== 2);
 });
 
 function startJarvisAnimation() {
@@ -85,8 +96,23 @@ function startJarvisAnimation() {
 }
 
 function stopJarvisAnimation() {
-  window.JarvisVoice?.onViewClose();
+  if (!document.body.classList.contains("jarvis-docked")) window.JarvisVoice?.onViewClose();
 }
+
+function dockJarvis() {
+  document.body.classList.add("jarvis-docked");
+  selectTab(0);
+  jarvisDock.hidden = false;
+}
+
+function undockJarvis() {
+  document.body.classList.remove("jarvis-docked");
+  jarvisDock.hidden = true;
+  selectTab(2);
+}
+
+document.getElementById("dockTrigger").addEventListener("click", dockJarvis);
+document.getElementById("dockExpand").addEventListener("click", undockJarvis);
 
 function currentPlan() {
   return workspace.plans.find((plan) => plan.id === workspace.activeId) || null;
